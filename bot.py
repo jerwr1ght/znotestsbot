@@ -522,8 +522,14 @@ def upd_skipped(message, skipped_ques, subject):
         return sending_new(message)
     sql.execute(f"DELETE FROM skipped WHERE chatid = '{message.chat.id}' AND curques = {skipped_ques}")
     db.commit()
-    sql.execute(f"UPDATE subjects SET skipped_answers = skipped_answers - {1}, curques = curques - {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
-    db.commit()
+    sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}' AND curques = {skipped_ques} AND subject = '{subject}'")
+    curques_check=sql.fetchone()
+    if curques_check is None:
+        sql.execute(f"UPDATE subjects SET skipped_answers = skipped_answers - {1}, curques = curques - {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
+        db.commit()
+    else:
+        sql.execute(f"UPDATE subjects SET skipped_answers = skipped_answers - {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
+        db.commit()
 
 
 

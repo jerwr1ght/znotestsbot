@@ -211,7 +211,7 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
     for row in form.find("div", class_="question").find_all("p"):
         if row.get_text()=='' or row.get_text()=='\n':
             continue
-        question = question + html_fix(row.get_text())+'\n'
+        question = question + html_fix(row.contents)+'\n'
     action = form.find("div", class_="q-info")
     if action==None:
         action = form.find("div", class_="select-answers-title")
@@ -318,8 +318,6 @@ def html_fix(added_items):
     added_item = added_item.replace("<br\>", "\n")
     added_item = added_item.replace("</br", "\n")
     added_item = added_item.replace("br", "\n")
-    added_item = added_item.replace("<", "")
-    added_item = added_item.replace(">", "")
     return added_item
 
 def send_parts(message, ques_len, img_link, reply_markup, question, action):

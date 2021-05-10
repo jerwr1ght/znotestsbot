@@ -393,6 +393,7 @@ def callback_inline(call):
             if res is None:
                 sql.execute("INSERT INTO skipped VALUES (%s, %s, %s)", (call.message.chat.id, subject, ques_num))
                 db.commit()
+            bot.delete_message(call.message.chat.id, call.message.message_id)
             bot.send_message(call.message.chat.id, f"Запитання пропущено.\nЯк тільки ви будете готові відповісти на нього, використайте команду /skipped.", parse_mode='html')
             sql.execute(f"UPDATE subjects SET skipped_answers = skipped_answers + {1} WHERE chatid = '{call.message.chat.id}' AND subject = '{subject}'")
             db.commit()

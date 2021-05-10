@@ -79,11 +79,11 @@ def changing_sub(message):
 
 @bot.message_handler(commands=['skipped'])
 def skipped_questions(message):
-    sql.execute(f"SELECT * FROM skipped WHERE chatid= '{message.chat.id}'")
+    sql.execute(f"SELECT * FROM skipped WHERE chatid = '{message.chat.id}'")
     try:
         res = sql.fetchone()
     except:
-        return bot.reply_to('⚠️ У вас немає пропущених питань.')
+        return bot.reply_to(message,'⚠️ У вас немає пропущених питань.')
     if res is None:
         return bot.reply_to(message, f'⚠️ У вас немає пропущених питань.')
     sql.execute(f"SELECT * FROM skipped WHERE chatid= '{message.chat.id}' ORDER by curques")
@@ -103,7 +103,7 @@ def reseting(message):
 
 @bot.message_handler(commands=['stats'])
 def statistics(message):
-    sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}'")
+    sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}' ORDER by subject DESC")
     rows=sql.fetchall()
     if rows!=[]:
         msg = f'📈 Ваші результати 📈\n\n'
@@ -341,7 +341,7 @@ def callback_inline(call):
     if call.message:
         bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=None)
         if call.data == 'start':
-            msg=f'✅ Гаразд. Час розпочинати! Виберіть предмет, тести з якого бажаєте пройти. Ви також зможете змінити предмет, скориставшись командою /changesub'
+            msg=f'✅ Гаразд. Час розпочинати! Виберіть предмет, тести з якого бажаєте пройти. Ви також зможете змінити предмет, скориставшись командою /changesub.'
             bot.send_message(call.message.chat.id, msg, reply_markup=subjects_reply)
             #sending_new(call.message)
         elif 'change-' in call.data:
@@ -388,16 +388,19 @@ def callback_inline(call):
             else:
                 msg = call.message.text
             ques_num=msg.replace('Завдання #', '')[:msg.replace('Завдання #', '').index('\n')]
-            sql.execute(f"SELECT * FROM skipped WHERE chatid = '{call.message.chat.id}' AND subject = '{subject}' AND curques = '{ques_num}'")
+            sql.execute(f"SELECT subject FROM skipped WHERE chatid = '{call.message.chat.id}' AND subject = '{subject}' AND curques = {ques_num}")
             res=sql.fetchone()
             if res is None:
                 sql.execute("INSERT INTO skipped VALUES (%s, %s, %s)", (call.message.chat.id, subject, ques_num))
                 db.commit()
+                sql.execute(f"UPDATE subjects SET skipped_answers = skipped_answers + {1}, curques = curques + {1} WHERE chatid = '{call.message.chat.id}' AND subject = '{subject}'")
+                db.commit()
+                bot.delete_message(call.message.chat.id, call.message.message_id)
+                bot.send_message(call.message.chat.id, f"Запитання пропущено.\nЯк тільки ви будете готові відповісти на нього, використайте команду /skipped.", parse_mode='html')
+                sending_new(call.message)
+                return
             bot.delete_message(call.message.chat.id, call.message.message_id)
             bot.send_message(call.message.chat.id, f"Запитання пропущено.\nЯк тільки ви будете готові відповісти на нього, використайте команду /skipped.", parse_mode='html')
-            sql.execute(f"UPDATE subjects SET skipped_answers = skipped_answers + {1} WHERE chatid = '{call.message.chat.id}' AND subject = '{subject}'")
-            db.commit()
-            #sending_new(call.message)
         
 
 def sending_answer(message, right_answer, subject, skipped_ques=None):
@@ -520,11 +523,10 @@ def callback_check_skipped(right_answer):
 def upd_skipped(message, skipped_ques, subject):
     if skipped_ques==None:
         return sending_new(message)
-    sql.execute(f"DELETE FROM skipped WHERE chatid = '{message.chat.id}' AND curques = {skipped_ques}")
+    sql.execute(f"DELETE FROM skipped WHERE chatid = '{message.chat.id}' AND curques = {skipped_ques} AND subject = '{subject}'")
     db.commit()
-    sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}' AND curques = {skipped_ques} AND subject = '{subject}'")
-    curques_check=sql.fetchone()
-    if curques_check is None:
+    sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}' AND subject = '{subject}' AND curques = {int(skipped_ques)-1}")
+    if sql.fetchone() is None:
         sql.execute(f"UPDATE subjects SET skipped_answers = skipped_answers - {1}, curques = curques - {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
         db.commit()
     else:

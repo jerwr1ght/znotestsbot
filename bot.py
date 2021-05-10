@@ -490,9 +490,9 @@ def subjects_keyboard():
 
 subjects_keyboard()
 
-#def sub_to_right(subject):
-#   if subject in subjects_dict:
-#        return subjects_dict[subject]
+def sub_to_right(subject):
+   if subject in subjects_dict:
+        return subjects_dict[subject]
     
 def fix_answer(answer):
     true_answer_list = {"a": "а", "b": "б", "c": "в", "d":"г", "e":"д"}

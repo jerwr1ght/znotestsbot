@@ -10,7 +10,7 @@ import time
 global db
 global sql
 global subjects_dict
-subjects_dict={'geography':'Географія', 'ukrainian':'Українська мова та література', 'mathematics':'Математика'}
+subjects_dict={'geography':'Географія', 'ukrainian':'Українська мова та література', 'mathematics':'Математика', 'ukraine-history': 'Історія України'}
 db = psycopg2.connect(database='d3c27kffj2v0vc', user='atwrdkeysuvsow', port="5432", password='e96ab8dc96694ff10bf8ab2577e2d109248c1bb7c5df043021c58ad31ee615fd', host='ec2-34-206-8-52.compute-1.amazonaws.com', sslmode='require')
 sql=db.cursor()
 sql.execute("""CREATE TABLE IF NOT EXISTS users (chatid TEXT, cursub TEXT)""")
@@ -217,7 +217,11 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
         action = form.find("div", class_="select-answers-title")
     action = action.get_text(strip=True)
 
-    right_answer=str(form.find("input", {"type":"hidden", "name":"result"}).get("value"))
+    right_answer=form.find("input", {"type":"hidden", "name":"result"}).get("value")
+    if right_answer is None:
+        return bot.send_message(message.chat.id, "⚠️ З'явилась помилка. Повідомте, будь ласка, про це розробнику (контаки в інформації про бота).")
+    else:
+        right_answer = str(right_answer)
     true_answer_list = {"a": "а", "b": "б", "c": "в", "d":"г", "e":"д"}
     for row in true_answer_list:
         if row in right_answer:

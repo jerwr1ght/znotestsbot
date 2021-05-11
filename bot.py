@@ -519,7 +519,8 @@ def sub_to_right(subject):
 def fix_answer(answer):
     true_answer_list = {"a": "а", "b": "б", "c": "в", "d":"г", "e":"д"}
     for row in true_answer_list:
-        if answer.lower() not in true_answer_list[row] or answer.lower() not in row:
+        print(answer)
+        if answer.lower() not in true_answer_list[row] and answer.lower() not in row:
             return None
         if row in answer.lower():
             answer = answer.replace(row, true_answer_list[row])

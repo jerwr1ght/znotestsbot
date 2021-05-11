@@ -354,6 +354,9 @@ def callback_inline(call):
             right_answer=call.data.replace('answer-many-', '', 1)
             right_answer, skipped_ques = callback_check_skipped(right_answer)
             subject = right_answer[:right_answer.index('-')]
+            if 'ukraine-history' in call.data:
+                subject = 'ukraine-history'
+                right_answer = right_answer.replace("ukraine-history", "")
             right_answer = right_answer[right_answer.index('-')+1:]
             get_answer = bot.send_message(call.message.chat.id, "Яка ваша відповідь? Варіанти відповідей можна надати у будь-якій послідовності.")
             bot.register_next_step_handler(get_answer, sending_many_answer, right_answer, subject, skipped_ques)
@@ -361,6 +364,9 @@ def callback_inline(call):
             right_answer=call.data.replace('answer-one-', '', 1)
             right_answer, skipped_ques = callback_check_skipped(right_answer)
             subject = right_answer[:right_answer.index('-')]
+            if 'ukraine-history' in call.data:
+                subject = 'ukraine-history'
+                right_answer = right_answer.replace("ukraine-history", "")
             right_answer = right_answer[right_answer.index('-')+1:]
             get_answer = bot.send_message(call.message.chat.id, "Яка ваша відповідь?")
             bot.register_next_step_handler(get_answer, sending_answer, right_answer, subject, skipped_ques)
@@ -368,6 +374,9 @@ def callback_inline(call):
             right_answer = call.data.replace('wrong-', '', 1)
             right_answer, skipped_ques = callback_check_skipped(right_answer)
             subject = right_answer[:right_answer.index('-')]
+            if 'ukraine-history' in call.data:
+                subject = 'ukraine-history'
+                right_answer = right_answer.replace("ukraine-history", "")
             right_answer = right_answer[right_answer.index('-')+1:]
             sql.execute(f"UPDATE subjects SET wrong_answers = wrong_answers + {1}, curques = curques + {1} WHERE chatid = '{call.message.chat.id}' AND subject = '{subject}'")
             db.commit()
@@ -377,6 +386,9 @@ def callback_inline(call):
             right_answer = call.data.replace('right-', '', 1)
             right_answer, skipped_ques = callback_check_skipped(right_answer)
             subject = right_answer[:right_answer.index('-')]
+            if 'ukraine-history' in call.data:
+                subject = 'ukraine-history'
+                right_answer = right_answer.replace("ukraine-history", "")
             right_answer = right_answer[right_answer.index('-')+1:]
             sql.execute(f"UPDATE subjects SET right_answers = right_answers + {1}, curques = curques + {1} WHERE chatid = '{call.message.chat.id}' AND subject = '{subject}'")
             db.commit()

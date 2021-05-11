@@ -129,14 +129,14 @@ def global_statistics(message):
         if res is None:
             continue
 
-        sql.execute(f"SELECT * FROM users")
-        users_number = len(sql.fetchall())
+        #sql.execute(f"SELECT * FROM users")
+        #users_number = len(sql.fetchall())
 
         sql.execute(f"SELECT right_answers, wrong_answers, skipped_answers FROM subjects WHERE subject = '{sub}'")
         rows=sql.fetchall()
         if rows == []:
             return bot.reply_to(message, f"⚠️ Поки що неможливо отримати загальну статистику.")
-
+        users_number = len(rows)
         global_right_answers=0
         global_wrong_answers=0
         global_skipped_answers=0

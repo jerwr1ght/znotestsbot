@@ -423,10 +423,10 @@ def sending_answer(message, right_answer, subject, skipped_ques=None):
         return bot.send_message(message.chat.id, f'✅ Добре! Як тільки будете готові відповісти, знову натисніть на відповідну кнопку.')
     if message.text.isdigit()==False:
         right_counter=0
+        if fix_answer(message.text) is None:
+            return bot.send_message(message.chat.id, "⚠️ З'явилась помилка. Використовуйте лише українські літери А-Д для відповідей. Спробуйте відповісти ще раз за допомогою команди /resetquestion.")
         for i in range(len(right_answer)):
             try:
-                if fix_answer(message.text)[i] is None:
-                    return bot.send_message(message.chat.id, "⚠️ З'явилась помилка. Використовуйте лише українські літери А-Д для відповідей. Спробуйте відповісти ще раз за допомогою команди /resetquestion.")
                 if fix_answer(message.text)[i] == right_answer[i]:
                     sql.execute(f"UPDATE subjects SET right_answers = right_answers + {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
                     db.commit()

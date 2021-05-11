@@ -425,6 +425,8 @@ def sending_answer(message, right_answer, subject, skipped_ques=None):
         right_counter=0
         for i in range(len(right_answer)):
             try:
+                if fix_answer(message.text)[i] is None:
+                    return bot.send_message(message.chat.id, "⚠️ З'явилась помилка. Використовуйте лише літери А-Д для відповідей. Спробуйте відповісти ще раз за допомогою команди /resetquestion.")
                 if fix_answer(message.text)[i] == right_answer[i]:
                     sql.execute(f"UPDATE subjects SET right_answers = right_answers + {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
                     db.commit()
@@ -461,6 +463,8 @@ def sending_many_answer(message, right_answer, subject, skipped_ques=None):
     if message.text=='/cancel':
         return bot.send_message(message.chat.id, f'✅ Добре! Як тільки будете готові відповісти, знову натисніть на відповідну кнопку.')
     user_answer = fix_answer(message.text)
+    if user_answer is None:
+        return bot.send_message(message.chat.id, "⚠️ З'явилась помилка. Використовуйте лише літери А-Д для відповідей. Спробуйте відповісти ще раз за допомогою команди /resetquestion.")
     msg_right_answer = ''
     for arow in right_answer:
         msg_right_answer=f'{msg_right_answer}{arow};'
@@ -515,6 +519,8 @@ def sub_to_right(subject):
 def fix_answer(answer):
     true_answer_list = {"a": "а", "b": "б", "c": "в", "d":"г", "e":"д"}
     for row in true_answer_list:
+        if answer not in true_answer_list[row] or answer not in row:
+            return None
         if row in answer:
             answer = answer.replace(row, true_answer_list[row])
     answer=answer.upper()

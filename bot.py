@@ -426,7 +426,7 @@ def sending_answer(message, right_answer, subject, skipped_ques=None):
         for i in range(len(right_answer)):
             try:
                 if fix_answer((message.text)[i]) is None:
-                    return bot.send_message(message.chat.id, "⚠️ З'явилась помилка. Використовуйте лише літери А-Д для відповідей. Спробуйте відповісти ще раз за допомогою команди /resetquestion.")
+                    return bot.send_message(message.chat.id, "⚠️ З'явилась помилка. Використовуйте лише українські літери А-Д для відповідей. Спробуйте відповісти ще раз за допомогою команди /resetquestion.")
                 if fix_answer(message.text)[i] == right_answer[i]:
                     sql.execute(f"UPDATE subjects SET right_answers = right_answers + {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
                     db.commit()
@@ -519,9 +519,9 @@ def sub_to_right(subject):
 def fix_answer(answer):
     true_answer_list = {"a": "а", "b": "б", "c": "в", "d":"г", "e":"д"}
     for row in true_answer_list:
-        if answer not in true_answer_list[row] or answer not in row:
+        if answer.lower() not in true_answer_list[row] or answer.lower() not in row:
             return None
-        if row in answer:
+        if row in answer.lower():
             answer = answer.replace(row, true_answer_list[row])
     answer=answer.upper()
     return answer

@@ -427,7 +427,7 @@ def sending_answer(message, right_answer, subject, skipped_ques=None):
             try:
                 if fix_answer((message.text)[i]) is None:
                     return bot.send_message(message.chat.id, "⚠️ З'явилась помилка. Використовуйте лише українські літери А-Д для відповідей. Спробуйте відповісти ще раз за допомогою команди /resetquestion.")
-                if fix_answer(message.text)[i] == right_answer[i]:
+                if fix_answer((message.text)[i]) == right_answer[i]:
                     sql.execute(f"UPDATE subjects SET right_answers = right_answers + {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
                     db.commit()
                     right_counter+=1

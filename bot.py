@@ -103,18 +103,27 @@ def reseting(message):
 
 @bot.message_handler(commands=['stats'])
 def statistics(message):
-    sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}' ORDER by subject DESC")
-    rows=sql.fetchall()
-    if rows!=[]:
-        msg = f'📈 Ваші результати 📈\n\n'
-        for row in rows:
-            try:
-                msg = f'{msg}<b>{sub_to_right(row[1])}</b>\nВідповідей:\n✅ Правильних - <b>{row[2]}</b>\n❌ Неправильних - <b>{row[3]}</b>\n💨 Пропущених - <b>{row[4]}</b>\n\n🎯 Точність: <b>{round(int(row[2])*100/(int(row[2])+int(row[3])+int(row[4])), 2)}%</b>\n\nЗараз на запитанні: <b>{row[5]}/{last_ques_check(row[1])}</b>\n\n'
-            except ZeroDivisionError:
-                msg = f'{msg}<b>{sub_to_right(row[1])}</b>\nВідповідей:\n✅ Правильних - <b>{row[2]}</b>\n❌ Неправильних - <b>{row[3]}</b>\n💨 Пропущених - <b>{row[4]}</b>\n\n🎯 Точність: неможливо підрахувати на першому запитанні\n\nЗараз на запитанні: <b>{row[5]}/{last_ques_check(row[1])}</b>\n\n'
-        bot.send_message(message.chat.id, msg, parse_mode='html')
-    else:
+    sql.execute(f"SELECT cursub FROM users WHERE chatid = '{message.chat.id}'")
+    subject = sql.fetchone()
+    if subject is None:
         return bot.reply_to(message, "Використайте команду /start для початку.")
+    statistics_reply=types.InlineKeyboardMarkup(row_width=2)
+    for row in subjects_dict:
+        statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'statistics-{row}'))
+    bot.send_message(message.chat.id, get_statistics(message, subject[0]), parse_mode='html', reply_markup=statistics_reply)
+
+def get_statistics(message, subject, call=None):
+    sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
+    res=sql.fetchone()
+    if res!=None:
+        msg = f'📈 Ваші результати 📈\n\n'
+        try:
+            msg = f'{msg}<b>{sub_to_right(res[1])}</b>\nВідповідей:\n✅ Правильних - <b>{res[2]}</b>\n❌ Неправильних - <b>{res[3]}</b>\n💨 Пропущених - <b>{res[4]}</b>\n\n🎯 Точність: <b>{round(int(res[2])*100/(int(res[2])+int(res[3])+int(res[4])), 2)}%</b>\n\nЗараз на запитанні: <b>{res[5]}/{last_ques_check(res[1])}</b>\n\n'
+        except ZeroDivisionError:
+            msg = f'{msg}<b>{sub_to_right(res[1])}</b>\nВідповідей:\n✅ Правильних - <b>{res[2]}</b>\n❌ Неправильних - <b>{res[3]}</b>\n💨 Пропущених - <b>{res[4]}</b>\n\n🎯 Точність: неможливо підрахувати на першому запитанні\n\nЗараз на запитанні: <b>{res[5]}/{last_ques_check(res[1])}</b>\n\n'
+        return msg
+    else:
+        return bot.reply_to(message, f"⚠️ Поки що неможливо отримати загальну статистику.")
 
 @bot.message_handler(commands=['globalstats'])
 def global_statistics(message):
@@ -122,47 +131,54 @@ def global_statistics(message):
     res=sql.fetchone()
     if res is None:
         return bot.reply_to(message, "Використайте команду /changesub та виберіть один із запропонованих предметів.")
+    sql.execute(f"SELECT cursub FROM users WHERE chatid = '{message.chat.id}'")
+    subject = sql.fetchone()
+    global_statistics_reply=types.InlineKeyboardMarkup(row_width=2)
+    for row in subjects_dict:
+        global_statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'globalstatistics-{row}'))
+    bot.send_message(message.chat.id, get_global_statistics(message, subject[0]), parse_mode='html', reply_markup=global_statistics_reply)
+
+def get_global_statistics(message, subject, call=None):
+    sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
+    res=sql.fetchone()
+    if res is None:
+        return bot.reply_to(message, "⚠️ Ви не проходили тести з цього предмету.")
+
+    #sql.execute(f"SELECT * FROM users")
+    #users_number = len(sql.fetchall())
+
     msg=''
-    for sub in subjects_dict:
-        sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}' AND subject = '{sub}'")
-        res=sql.fetchone()
-        if res is None:
-            continue
-
-        #sql.execute(f"SELECT * FROM users")
-        #users_number = len(sql.fetchall())
-
-        sql.execute(f"SELECT right_answers, wrong_answers, skipped_answers FROM subjects WHERE subject = '{sub}'")
-        rows=sql.fetchall()
-        if rows == []:
-            return bot.reply_to(message, f"⚠️ Поки що неможливо отримати загальну статистику.")
-        users_number = len(rows)
-        global_right_answers=0
-        global_wrong_answers=0
-        global_skipped_answers=0
-        for row in rows:
-            global_right_answers+=row[0]
-            global_wrong_answers+=row[1]
-            global_skipped_answers+=row[2]
-        try:
-            global_right_percents = round((int(res[2])*100)/global_right_answers, 2)
-        except ZeroDivisionError: 
-            global_right_percents=0.0
-        try:
-            global_wrong_percents = round((int(res[3])*100)/global_wrong_answers, 2)
-        except ZeroDivisionError: 
-            global_wrong_percents=0.0
-        try:
-            global_skipped_percents = round((int(res[4])*100)/global_skipped_answers, 2)
-        except ZeroDivisionError: 
-            global_skipped_percents=0.0
-        try:
-            accuracy = str(round(int(global_right_answers)*100/(int(global_right_answers)+int(global_wrong_answers)+int(global_skipped_answers)), 2))+'%'
-        except ZeroDivisionError: 
-            accuracy='поки що неможливо підрахувати'
-        msg = f'{msg}<b>{subjects_dict[sub]}</b>\n🌐 Усього учасників: <b>{users_number}</b>\n\nЗагальних відповідей:\n✅ Правильних - <b>{global_right_answers}</b> (<b>{global_right_percents}%</b> ваших)\n❌ Неправильних - <b>{global_wrong_answers}</b> (<b>{global_wrong_percents}%</b> ваших)\n💨 Пропущених - <b>{global_skipped_answers}</b> (<b>{global_skipped_percents}%</b> ваших)\n\n🎯 Загальна точність: <b>{accuracy}</b>\n\n'
+    sql.execute(f"SELECT right_answers, wrong_answers, skipped_answers FROM subjects WHERE subject = '{subject}'")
+    rows=sql.fetchall()
+    if rows == []:
+        return bot.reply_to(message, f"⚠️ Поки що неможливо отримати загальну статистику.")
+    users_number = len(rows)
+    global_right_answers=0
+    global_wrong_answers=0
+    global_skipped_answers=0
+    for row in rows:
+        global_right_answers+=row[0]
+        global_wrong_answers+=row[1]
+        global_skipped_answers+=row[2]
+    try:
+        global_right_percents = round((int(res[2])*100)/global_right_answers, 2)
+    except ZeroDivisionError: 
+        global_right_percents=0.0
+    try:
+        global_wrong_percents = round((int(res[3])*100)/global_wrong_answers, 2)
+    except ZeroDivisionError: 
+        global_wrong_percents=0.0
+    try:
+        global_skipped_percents = round((int(res[4])*100)/global_skipped_answers, 2)
+    except ZeroDivisionError: 
+        global_skipped_percents=0.0
+    try:
+        accuracy = str(round(int(global_right_answers)*100/(int(global_right_answers)+int(global_wrong_answers)+int(global_skipped_answers)), 2))+'%'
+    except ZeroDivisionError: 
+        accuracy='поки що неможливо підрахувати'
+    msg = f'{msg}<b>{subjects_dict[subject]}</b>\n🌐 Усього учасників: <b>{users_number}</b>\n\nЗагальних відповідей:\n✅ Правильних - <b>{global_right_answers}</b> (<b>{global_right_percents}%</b> ваших)\n❌ Неправильних - <b>{global_wrong_answers}</b> (<b>{global_wrong_percents}%</b> ваших)\n💨 Пропущених - <b>{global_skipped_answers}</b> (<b>{global_skipped_percents}%</b> ваших)\n\n🎯 Загальна точність: <b>{accuracy}</b>\n\n'
     msg = f'📈 Результати учасників 📈\n\n{msg}'
-    bot.send_message(message.chat.id, msg, parse_mode='html')
+    return msg
 
 
 #@bot.message_handler(commands=['others'])
@@ -347,6 +363,18 @@ def callback_inline(call):
             msg=f'✅ Гаразд. Час розпочинати! Виберіть предмет, тести з якого бажаєте пройти. Ви також зможете змінити предмет, скориставшись командою /changesub.'
             bot.send_message(call.message.chat.id, msg, reply_markup=subjects_reply)
             #sending_new(call.message)
+        elif 'globalstatistics-' in call.data:
+            subject = call.data.replace('globalstatistics-', '')
+            global_statistics_reply=types.InlineKeyboardMarkup(row_width=2)
+            for row in subjects_dict:
+                global_statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'globalstatistics-{row}'))
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=get_global_statistics(call.message, subject, call), reply_markup=global_statistics_reply, parse_mode='html')
+        elif 'statistics-' in call.data:
+            subject = call.data.replace('statistics-', '')
+            statistics_reply=types.InlineKeyboardMarkup(row_width=2)
+            for row in subjects_dict:
+                statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'statistics-{row}'))
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=get_statistics(call.message, subject, call), reply_markup=statistics_reply, parse_mode='html')
         elif 'change-' in call.data:
             subject = call.data.replace('change-', '')
             change_sub(call.message, subject)
@@ -511,6 +539,7 @@ def subjects_keyboard():
         subjects_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'change-{row}'))
 
 subjects_keyboard()
+
 
 def sub_to_right(subject):
    if subject in subjects_dict:

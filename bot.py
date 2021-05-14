@@ -20,7 +20,7 @@ sql.execute("""CREATE TABLE IF NOT EXISTS subjects (chatid TEXT, subject TEXT, r
 db.commit()
 sql.execute("""CREATE TABLE IF NOT EXISTS skipped (chatid TEXT, subject TEXT, curques INT)""")
 db.commit()
-#sql.execute(f"DELETE FROM subjects WHERE subject = 'chemistry'")
+#sql.execute(f"DELETE FROM subjects WHERE subject = 'physics'")
 #db.commit()
 
 
@@ -245,7 +245,7 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
     right_answer=right_answer.upper()
     answers_list=[]
     items = form.find_all("div", class_="answers")
-    if items!=None:
+    if items[0].find("div")!=None:
         for item in items:
             for item_answer in item.find_all("div"):
                 #print(added_item)
@@ -264,6 +264,11 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
                     
                     question = f'{question}\n{number}) {added_item}'
             question = question+'\n'
+    else:
+        items = form.find("table").find('tr')
+        if items!=None:
+            for item_answer in items.find_all("th"):
+                answers_list.append(item_answer.get_text(strip=True))
     
     img = form.find("img")
     if img != None:

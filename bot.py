@@ -113,7 +113,6 @@ def statistics(message):
     for row in subjects_dict:
         statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'statistics-{row}'))
     bot.send_message(message.chat.id, get_statistics(message, subject[0]), parse_mode='html', reply_markup=statistics_reply)
-
 def get_statistics(message, subject, call=None):
     sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
     res=sql.fetchone()
@@ -125,7 +124,7 @@ def get_statistics(message, subject, call=None):
             msg = f'{msg}<b>{sub_to_right(res[1])}</b>\nВідповідей:\n✅ Правильних - <b>{res[2]}</b>\n❌ Неправильних - <b>{res[3]}</b>\n💨 Пропущених - <b>{res[4]}</b>\n\n🎯 Точність: неможливо підрахувати на першому запитанні\n\nЗараз на запитанні: <b>{res[5]}/{last_ques_check(res[1])}</b>\n\n'
         return msg
     else:
-        return bot.reply_to(message, f"⚠️ Поки що неможливо отримати загальну статистику.")
+        return bot.reply_to(message, f"⚠️ Ви не проходили тести з цього предмету.")
 
 @bot.message_handler(commands=['globalstats'])
 def global_statistics(message):
@@ -139,7 +138,6 @@ def global_statistics(message):
     for row in subjects_dict:
         global_statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'globalstatistics-{row}'))
     bot.send_message(message.chat.id, get_global_statistics(message, subject[0]), parse_mode='html', reply_markup=global_statistics_reply)
-
 def get_global_statistics(message, subject, call=None):
     sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
     res=sql.fetchone()
@@ -370,13 +368,19 @@ def callback_inline(call):
             global_statistics_reply=types.InlineKeyboardMarkup(row_width=2)
             for row in subjects_dict:
                 global_statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'globalstatistics-{row}'))
-            bot.edit_message_text(text=get_global_statistics(call.message, subject, call), chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=global_statistics_reply, parse_mode='html')
+            try:
+                bot.edit_message_text(text=get_global_statistics(call.message, subject, call), chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=global_statistics_reply, parse_mode='html')
+            except:
+                pass
         elif 'statistics-' in call.data:
             subject = call.data.replace('statistics-', '')
             statistics_reply=types.InlineKeyboardMarkup(row_width=2)
             for row in subjects_dict:
                 statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'statistics-{row}'))
-            bot.edit_message_text(text=get_statistics(call.message, subject, call), chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=statistics_reply, parse_mode='html')
+            try:
+                bot.edit_message_text(text=get_statistics(call.message, subject, call), chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=statistics_reply, parse_mode='html')
+            except:
+                pass
         elif 'change-' in call.data:
             subject = call.data.replace('change-', '')
             change_sub(call.message, subject)

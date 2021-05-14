@@ -10,7 +10,7 @@ import time
 global db
 global sql
 global subjects_dict
-subjects_dict={'geography':'Географія', 'ukrainian':'Українська мова та література', 'mathematics':'Математика', 'ukraine-history': 'Історія України'}
+subjects_dict={'biology':'Біологія','geography':'Географія', 'ukrainian':'Українська мова та література', 'mathematics':'Математика', 'ukraine-history': 'Історія України'}
 db = psycopg2.connect(database='d7vu070ofr61cg', user='ekelorsfyfauek', port="5432", password='f99c8f6fd63dec2d3913c7daef4095819205f44c0d4e19c1ecb63ad495e9b960', host='ec2-54-243-92-68.compute-1.amazonaws.com', sslmode='require')
 sql=db.cursor()
 sql.execute("""CREATE TABLE IF NOT EXISTS users (chatid TEXT, cursub TEXT)""")
@@ -20,6 +20,8 @@ sql.execute("""CREATE TABLE IF NOT EXISTS subjects (chatid TEXT, subject TEXT, r
 db.commit()
 sql.execute("""CREATE TABLE IF NOT EXISTS skipped (chatid TEXT, subject TEXT, curques INT)""")
 db.commit()
+#sql.execute(f"DELETE FROM subjects WHERE subject = 'biology'")
+#db.commit()
 
 
 
@@ -368,13 +370,13 @@ def callback_inline(call):
             global_statistics_reply=types.InlineKeyboardMarkup(row_width=2)
             for row in subjects_dict:
                 global_statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'globalstatistics-{row}'))
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=get_global_statistics(call.message, subject, call), reply_markup=global_statistics_reply, parse_mode='html')
+            bot.edit_message_text(text=get_global_statistics(call.message, subject, call), chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=global_statistics_reply, parse_mode='html')
         elif 'statistics-' in call.data:
             subject = call.data.replace('statistics-', '')
             statistics_reply=types.InlineKeyboardMarkup(row_width=2)
             for row in subjects_dict:
                 statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'statistics-{row}'))
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=get_statistics(call.message, subject, call), reply_markup=statistics_reply, parse_mode='html')
+            bot.edit_message_text(text=get_statistics(call.message, subject, call), chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=statistics_reply, parse_mode='html')
         elif 'change-' in call.data:
             subject = call.data.replace('change-', '')
             change_sub(call.message, subject)

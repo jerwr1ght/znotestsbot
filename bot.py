@@ -11,7 +11,7 @@ global db
 global sql
 global subjects_dict
 subjects_dict={'geography':'Географія', 'ukrainian':'Українська мова та література', 'mathematics':'Математика', 'ukraine-history': 'Історія України'}
-db = psycopg2.connect(database='d3c27kffj2v0vc', user='atwrdkeysuvsow', port="5432", password='e96ab8dc96694ff10bf8ab2577e2d109248c1bb7c5df043021c58ad31ee615fd', host='ec2-34-206-8-52.compute-1.amazonaws.com', sslmode='require')
+db = psycopg2.connect(database='d7vu070ofr61cg', user='ekelorsfyfauek', port="5432", password='f99c8f6fd63dec2d3913c7daef4095819205f44c0d4e19c1ecb63ad495e9b960', host='ec2-54-243-92-68.compute-1.amazonaws.com', sslmode='require')
 sql=db.cursor()
 sql.execute("""CREATE TABLE IF NOT EXISTS users (chatid TEXT, cursub TEXT)""")
 db.commit()

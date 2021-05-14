@@ -10,7 +10,7 @@ import time
 global db
 global sql
 global subjects_dict
-subjects_dict={'biology':'Біологія','geography':'Географія', 'ukraine-history': 'Історія України', 'mathematics':'Математика', 'ukrainian':'Українська мова та література', 'physics':'Фізика'}
+subjects_dict={'biology':'Біологія','geography':'Географія', 'ukraine-history': 'Історія України', 'mathematics':'Математика', 'ukrainian':'Українська мова та література', 'physics':'Фізика', 'chemistry':'Хімія'}
 db = psycopg2.connect(database='d7vu070ofr61cg', user='ekelorsfyfauek', port="5432", password='f99c8f6fd63dec2d3913c7daef4095819205f44c0d4e19c1ecb63ad495e9b960', host='ec2-54-243-92-68.compute-1.amazonaws.com', sslmode='require')
 sql=db.cursor()
 sql.execute("""CREATE TABLE IF NOT EXISTS users (chatid TEXT, cursub TEXT)""")
@@ -20,7 +20,7 @@ sql.execute("""CREATE TABLE IF NOT EXISTS subjects (chatid TEXT, subject TEXT, r
 db.commit()
 sql.execute("""CREATE TABLE IF NOT EXISTS skipped (chatid TEXT, subject TEXT, curques INT)""")
 db.commit()
-#sql.execute(f"DELETE FROM subjects WHERE subject = 'physics'")
+#sql.execute(f"DELETE FROM subjects WHERE subject = 'chemistry'")
 #db.commit()
 
 

@@ -455,9 +455,9 @@ def callback_inline(call):
             sql.execute(f"UPDATE subjects SET wrong_answers = wrong_answers + {1}, curques = curques + {1} WHERE chatid = '{call.message.chat.id}' AND subject = '{subject}'")
             db.commit()
             bot.send_message(call.message.chat.id, f"❌ На жаль, ваша відповідь неправильна.\n✅ Правильна відповідь: <b>{right_answer}</b>.", parse_mode='html')
-            #upd_skipped(call.message, skipped_ques, subject)
-            download_thread = threading.Thread(target=upd_skipped, args=(call.message, skipped_ques, subject,))
-            start_clock(call.message, download_thread)
+            upd_skipped(call.message, skipped_ques, subject)
+            #download_thread = threading.Thread(target=upd_skipped, args=(call.message, skipped_ques, subject,))
+            #start_clock(call.message, download_thread)
         elif 'right-' in call.data:
             right_answer = call.data.replace('right-', '', 1)
             right_answer, skipped_ques = callback_check_skipped(right_answer)
@@ -469,9 +469,9 @@ def callback_inline(call):
             sql.execute(f"UPDATE subjects SET right_answers = right_answers + {1}, curques = curques + {1} WHERE chatid = '{call.message.chat.id}' AND subject = '{subject}'")
             db.commit()
             bot.send_message(call.message.chat.id, f"✅ Вітаю, ви вибрали правильну відповідь: <b>{right_answer}</b>.", parse_mode='html')
-            download_thread = threading.Thread(target=upd_skipped, args=(call.message, skipped_ques, subject,))
-            start_clock(call.message, download_thread)
-            #upd_skipped(call.message, skipped_ques, subject)
+            #download_thread = threading.Thread(target=upd_skipped, args=(call.message, skipped_ques, subject,))
+            #start_clock(call.message, download_thread)
+            upd_skipped(call.message, skipped_ques, subject)
         elif 'skip-' in call.data:
             right_answer = call.data.replace('skip-', '', 1)
             subject = right_answer[:right_answer.index('-')]

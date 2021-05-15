@@ -271,7 +271,8 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
     true_answer_list = {"a": "а", "b": "б", "c": "в", "d":"г", "e":"д"}
     for row in true_answer_list:
         if row in right_answer:
-            right_answer = right_answer.replace(row, true_answer_list[row])
+            if subject.lower()!='english':
+                right_answer = right_answer.replace(row, true_answer_list[row])
     right_answer=right_answer.upper()
     answers_list=[]
     answers_images=[]
@@ -507,7 +508,11 @@ def sending_answer(message, right_answer, subject, skipped_ques=None):
             return bot.send_message(message.chat.id, "⚠️ З'явилась помилка. Використовуйте лише українські літери А-Д для відповідей. Спробуйте відповісти ще раз за допомогою команди /resetquestion.")
         for i in range(len(right_answer)):
             try:
-                if fix_answer(message.text)[i] == right_answer[i]:
+                if fix_answer(message.text)[i] == right_answer[i] and subject.lower()!='english':
+                    sql.execute(f"UPDATE subjects SET right_answers = right_answers + {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
+                    db.commit()
+                    right_counter+=1
+                elif message.text[i] == right_answer[i] and subject.lower()=='english':
                     sql.execute(f"UPDATE subjects SET right_answers = right_answers + {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
                     db.commit()
                     right_counter+=1
@@ -548,6 +553,8 @@ def sending_many_answer(message, right_answer, subject, skipped_ques=None):
     user_answer = fix_answer(message.text)
     if user_answer is None:
         return bot.send_message(message.chat.id, "⚠️ З'явилась помилка. Використовуйте лише літери А-Д для відповідей. Спробуйте відповісти ще раз за допомогою команди /resetquestion.")
+    if subject.lower()=='english':
+        user_answer=message.text
     msg_right_answer = ''
     for arow in right_answer:
         msg_right_answer=f'{msg_right_answer}{arow};'
@@ -603,7 +610,7 @@ def sub_to_right(subject):
         return subjects_dict[subject]
     
 def fix_answer(answer):
-    true_answer_list = {"a": "а", "b": "б", "c": "в", "d":"г", "e":"д"}
+    true_answer_list = {"a": "а", "b": "б", "c": "в", "d":"г", "e":"д", 'f':'f', 'g':'g', 'h':'h'}
     answer = answer.lower()
     for row in answer:
         if row not in true_answer_list and row not in true_answer_list.values():

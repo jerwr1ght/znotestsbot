@@ -52,7 +52,6 @@ def clock_message(message, clocks_list, msg, clock_sended):
     return clocks_list
 
 def start_clock(message, download_thread):
-    download_thread.start()
     clocks_list = list('🕛🕐🕑🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛')
     msg = f'Зачекайте, будь ласка {clocks_list[0]}'
     clocks_list.pop(0)
@@ -239,6 +238,7 @@ def checking_ques(message, skipped_ques=None, subject=None):
     #else:
     #    url=f'https://zno.osvita.ua/{subject}/all/{user_question}/'
     download_thread = threading.Thread(target=getting_ques, args=(message, user_question, url, subject, skipped_ques,))
+    download_thread.start()
     start_clock(message, download_thread)
     #getting_ques(message, user_question, url, subject, skipped_ques)
 
@@ -457,6 +457,7 @@ def callback_inline(call):
             bot.send_message(call.message.chat.id, f"❌ На жаль, ваша відповідь неправильна.\n✅ Правильна відповідь: <b>{right_answer}</b>.", parse_mode='html')
             #upd_skipped(call.message, skipped_ques, subject)
             download_thread = threading.Thread(target=upd_skipped, args=(call.message, skipped_ques, subject,))
+            download_thread.start()
             start_clock(message, download_thread)
         elif 'right-' in call.data:
             right_answer = call.data.replace('right-', '', 1)
@@ -470,6 +471,7 @@ def callback_inline(call):
             db.commit()
             bot.send_message(call.message.chat.id, f"✅ Вітаю, ви вибрали правильну відповідь: <b>{right_answer}</b>.", parse_mode='html')
             download_thread = threading.Thread(target=upd_skipped, args=(call.message, skipped_ques, subject,))
+            download_thread.start()
             start_clock(message, download_thread)
             #upd_skipped(call.message, skipped_ques, subject)
         elif 'skip-' in call.data:
@@ -492,6 +494,7 @@ def callback_inline(call):
                 bot.send_message(call.message.chat.id, f"Запитання пропущено.\nЯк тільки ви будете готові відповісти на нього, використайте команду /skipped.", parse_mode='html')
                 #sending_new(call.message)
                 download_thread = threading.Thread(target=sending_new, args=(call.message,))
+                download_thread.start()
                 start_clock(call.message, download_thread)
                 return
             bot.delete_message(call.message.chat.id, call.message.message_id)
@@ -539,6 +542,7 @@ def sending_answer(message, right_answer, subject, skipped_ques=None):
             bot.send_message(message.chat.id, f"❌ На жаль, ваша відповідь неправильна.\n✅ Правильна відповідь: <b>{right_answer}</b>.", parse_mode='html')
             #upd_skipped(message, skipped_ques, subject)
     download_thread = threading.Thread(target=upd_skipped, args=(message, skipped_ques, subject,))
+    download_thread.start()
     start_clock(message, download_thread)
     
 
@@ -562,6 +566,7 @@ def sending_many_answer(message, right_answer, subject, skipped_ques=None):
     bot.send_message(message.chat.id, f"✅ Вітаю, ви вибрали правильну відповідь: <b>{msg_right_answer}</b>.", parse_mode='html')
     #upd_skipped(message, skipped_ques, subject)
     download_thread = threading.Thread(target=upd_skipped, args=(message, skipped_ques, subject,))
+    download_thread.start()
     start_clock(message, download_thread)
 
 

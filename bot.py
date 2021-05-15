@@ -491,9 +491,7 @@ def callback_inline(call):
                 db.commit()
                 bot.delete_message(call.message.chat.id, call.message.message_id)
                 bot.send_message(call.message.chat.id, f"Запитання пропущено.\nЯк тільки ви будете готові відповісти на нього, використайте команду /skipped.", parse_mode='html')
-                #sending_new(call.message)
-                download_thread = threading.Thread(target=sending_new, args=(call.message,))
-                start_clock(call.message, download_thread)
+                sending_new(call.message)
                 return
             bot.delete_message(call.message.chat.id, call.message.message_id)
             bot.send_message(call.message.chat.id, f"Запитання пропущено.\nЯк тільки ви будете готові відповісти на нього, використайте команду /skipped.", parse_mode='html')

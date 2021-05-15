@@ -4,13 +4,14 @@ from telebot import types
 import config
 import psycopg2
 import requests
+import threading
 from bs4 import BeautifulSoup
 import lxml
 import time
 global db
 global sql
 global subjects_dict
-subjects_dict={'biology':'Біологія','geography':'Географія', 'ukraine-history': 'Історія України', 'mathematics':'Математика', 'ukrainian':'Українська мова та література', 'physics':'Фізика', 'chemistry':'Хімія'}
+subjects_dict={'english':'Англійська мова', 'biology':'Біологія', 'geography':'Географія', 'ukraine-history': 'Історія України', 'mathematics':'Математика', 'ukrainian':'Українська мова та література', 'physics':'Фізика', 'chemistry':'Хімія'}
 db = psycopg2.connect(database='d7vu070ofr61cg', user='ekelorsfyfauek', port="5432", password='f99c8f6fd63dec2d3913c7daef4095819205f44c0d4e19c1ecb63ad495e9b960', host='ec2-54-243-92-68.compute-1.amazonaws.com', sslmode='require')
 sql=db.cursor()
 sql.execute("""CREATE TABLE IF NOT EXISTS users (chatid TEXT, cursub TEXT)""")
@@ -20,7 +21,7 @@ sql.execute("""CREATE TABLE IF NOT EXISTS subjects (chatid TEXT, subject TEXT, r
 db.commit()
 sql.execute("""CREATE TABLE IF NOT EXISTS skipped (chatid TEXT, subject TEXT, curques INT)""")
 db.commit()
-#sql.execute(f"DELETE FROM subjects WHERE subject = 'physics'")
+#sql.execute(f"DELETE FROM subjects WHERE subject = 'english'")
 #db.commit()
 
 
@@ -36,6 +37,29 @@ def last_ques_check(subject):
 
 
 bot=telebot.TeleBot(config.TOKEN)
+
+def clock_message(message, clocks_list, msg, clock_sended):
+    if clocks_list==[]:
+        clocks_list=list('🕛🕐🕑🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛')
+        clocks_list.pop(0)
+    time.sleep(0.05)
+    msg = f"{msg.replace(msg[len(msg)-2:], '')} {clocks_list[0]}"
+    try:
+        bot.edit_message_text(msg, chat_id=clock_sended.chat.id, message_id=clock_sended.message_id, parse_mode='html')
+        clocks_list.pop(0)
+    except:
+        pass
+    return clocks_list
+
+def start_clock(message, download_thread):
+    download_thread.start()
+    clocks_list = list('🕛🕐🕑🕒🕓🕔🕕🕖🕗🕘🕙🕚🕛')
+    msg = f'Зачекайте, будь ласка {clocks_list[0]}'
+    clocks_list.pop(0)
+    clock_sended = bot.send_message(message.chat.id, msg, parse_mode='html')
+    while download_thread.isAlive()!=False:
+        clocks_list=clock_message(message, clocks_list, msg, clock_sended)
+    bot.delete_message(clock_sended.chat.id, clock_sended.message_id) 
 
 @bot.message_handler(commands=['start'])
 def welcome(message):
@@ -214,7 +238,9 @@ def checking_ques(message, skipped_ques=None, subject=None):
                 url=f'https://zno.osvita.ua/{subject}/all/{user_question}/'
     #else:
     #    url=f'https://zno.osvita.ua/{subject}/all/{user_question}/'
-    getting_ques(message, user_question, url, subject, skipped_ques)
+    download_thread = threading.Thread(target=getting_ques, args=(message, user_question, url, subject, skipped_ques,))
+    start_clock(message, download_thread)
+    #getting_ques(message, user_question, url, subject, skipped_ques)
 
 def getting_ques(message, user_question, url, subject, skipped_ques=None):
     headers = {"user-agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36"}
@@ -224,10 +250,14 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
     if form is None:
         return bot.send_message(message.chat.id, "⚠️ З'явилась помилка. Повідомте, будь ласка, про це розробнику (контаки в інформації про бота).")
     question = f'<b>Завдання #{user_question}</b>\n'
+    if form.find("iframe")!=None:
+        video = form.find("iframe").get("src")
+        question=question+video+'\n'
     for row in form.find("div", class_="question").find_all("p"):
         if row.get_text()=='' or row.get_text()=='\n':
             continue
         question = question + html_fix(row.contents)+'\n'
+
     action = form.find("div", class_="q-info")
     if action==None:
         action = form.find("div", class_="select-answers-title")
@@ -244,6 +274,7 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
             right_answer = right_answer.replace(row, true_answer_list[row])
     right_answer=right_answer.upper()
     answers_list=[]
+    answers_images=[]
     items = form.find_all("div", class_="answers")
     if items[0].find("div")!=None:
         for item in items:
@@ -263,6 +294,8 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
                     added_item=html_fix(added_items)
                     
                     question = f'{question}\n{number}) {added_item}'
+                if item_answer.find("img")!=None:
+                    answer_img.append(item_answer.find("img").get('src'))
             question = question+'\n'
     else:
         items = form.find("table").find('tr')
@@ -324,7 +357,9 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
             bot.send_message(message.chat.id, send_parts(message, ques_len, img_link, lets_answer_many_markup, question, action), parse_mode='html', reply_markup=lets_answer_many_markup)
         else:
             bot.send_photo(message.chat.id, img_link, caption=send_parts(message, ques_len, img_link, lets_answer_many_markup, question, action), parse_mode='html', reply_markup=lets_answer_many_markup)
-
+    if answers_images!=[]:
+        for i in range(len(answers_images)):
+            bot.send_photo(message.chat.id, answers_images[i], caption=answers_list[i], parse_mode='html')
 def html_fix(added_items):
     added_item=''
     for row in added_items:
@@ -420,7 +455,9 @@ def callback_inline(call):
             sql.execute(f"UPDATE subjects SET wrong_answers = wrong_answers + {1}, curques = curques + {1} WHERE chatid = '{call.message.chat.id}' AND subject = '{subject}'")
             db.commit()
             bot.send_message(call.message.chat.id, f"❌ На жаль, ваша відповідь неправильна.\n✅ Правильна відповідь: <b>{right_answer}</b>.", parse_mode='html')
-            upd_skipped(call.message, skipped_ques, subject)
+            #upd_skipped(call.message, skipped_ques, subject)
+            download_thread = threading.Thread(target=upd_skipped, args=(call.message, skipped_ques, subject,))
+            start_clock(message, download_thread)
         elif 'right-' in call.data:
             right_answer = call.data.replace('right-', '', 1)
             right_answer, skipped_ques = callback_check_skipped(right_answer)
@@ -432,7 +469,9 @@ def callback_inline(call):
             sql.execute(f"UPDATE subjects SET right_answers = right_answers + {1}, curques = curques + {1} WHERE chatid = '{call.message.chat.id}' AND subject = '{subject}'")
             db.commit()
             bot.send_message(call.message.chat.id, f"✅ Вітаю, ви вибрали правильну відповідь: <b>{right_answer}</b>.", parse_mode='html')
-            upd_skipped(call.message, skipped_ques, subject)
+            download_thread = threading.Thread(target=upd_skipped, args=(call.message, skipped_ques, subject,))
+            start_clock(message, download_thread)
+            #upd_skipped(call.message, skipped_ques, subject)
         elif 'skip-' in call.data:
             right_answer = call.data.replace('skip-', '', 1)
             subject = right_answer[:right_answer.index('-')]
@@ -451,7 +490,9 @@ def callback_inline(call):
                 db.commit()
                 bot.delete_message(call.message.chat.id, call.message.message_id)
                 bot.send_message(call.message.chat.id, f"Запитання пропущено.\nЯк тільки ви будете готові відповісти на нього, використайте команду /skipped.", parse_mode='html')
-                sending_new(call.message)
+                #sending_new(call.message)
+                download_thread = threading.Thread(target=sending_new, args=(call.message,))
+                start_clock(call.message, download_thread)
                 return
             bot.delete_message(call.message.chat.id, call.message.message_id)
             bot.send_message(call.message.chat.id, f"Запитання пропущено.\nЯк тільки ви будете готові відповісти на нього, використайте команду /skipped.", parse_mode='html')
@@ -484,18 +525,21 @@ def sending_answer(message, right_answer, subject, skipped_ques=None):
         sql.execute(f"UPDATE subjects SET curques = curques + {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
         db.commit()
         bot.send_message(message.chat.id, msg, parse_mode='html')
-        upd_skipped(message, skipped_ques, subject)
+        #upd_skipped(message, skipped_ques, subject)
     elif message.text.isdigit()==True:
         if message.text.upper() == right_answer:
             sql.execute(f"UPDATE subjects SET right_answers = right_answers + {1}, curques = curques + {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
             db.commit()
             bot.send_message(message.chat.id, f"✅ Вітаю, ви вибрали правильну відповідь: <b>{right_answer}</b>.", parse_mode='html')
-            upd_skipped(message, skipped_ques, subject)
+            #upd_skipped(message, skipped_ques, subject)
+
         else:
             sql.execute(f"UPDATE subjects SET wrong_answers = wrong_answers + {1}, curques = curques + {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
             db.commit()
             bot.send_message(message.chat.id, f"❌ На жаль, ваша відповідь неправильна.\n✅ Правильна відповідь: <b>{right_answer}</b>.", parse_mode='html')
-            upd_skipped(message, skipped_ques, subject)
+            #upd_skipped(message, skipped_ques, subject)
+    download_thread = threading.Thread(target=upd_skipped, args=(message, skipped_ques, subject,))
+    start_clock(message, download_thread)
     
 
 def sending_many_answer(message, right_answer, subject, skipped_ques=None):
@@ -516,7 +560,9 @@ def sending_many_answer(message, right_answer, subject, skipped_ques=None):
     sql.execute(f"UPDATE subjects SET right_answers = right_answers + {1}, curques = curques + {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
     db.commit()
     bot.send_message(message.chat.id, f"✅ Вітаю, ви вибрали правильну відповідь: <b>{msg_right_answer}</b>.", parse_mode='html')
-    upd_skipped(message, skipped_ques, subject)
+    #upd_skipped(message, skipped_ques, subject)
+    download_thread = threading.Thread(target=upd_skipped, args=(message, skipped_ques, subject,))
+    start_clock(message, download_thread)
 
 
 def sending_new(message):

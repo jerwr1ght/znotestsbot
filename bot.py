@@ -102,7 +102,6 @@ def sending(message):
 def checking_emp(message):
     do_give_emp=bot.send_message(message.chat.id,'Введіть слово, наголос якого шукаєте.')
     bot.register_next_step_handler(do_give_emp, giving_emp)
-    
 def giving_emp(message):
     url = 'https://ru.osvita.ua/test/advice/65116/'
     user_msg = message.text
@@ -297,6 +296,8 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
         if row.get_text()=='' or row.get_text()=='\n':
             continue
         question = question + html_fix(row.contents)+'\n'
+    if form.find("div", class_="question").p is None:
+        question = question + html_fix(form.find("div", class_="question").contents)
 
     action = form.find("div", class_="q-info")
     if action==None:

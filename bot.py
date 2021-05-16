@@ -170,7 +170,12 @@ def get_global_statistics(message, subject, call=None):
 
     #sql.execute(f"SELECT * FROM users")
     #users_number = len(sql.fetchall())
-
+    sql.execute(f"SELECT * FROM users")
+    rows = sql.fetchall()
+    if rows==[]:
+        return bot.reply_to(message, f"⚠️ Поки що неможливо отримати загальну статистику.")
+    all_users_number = len(rows)
+    
     msg=''
     sql.execute(f"SELECT right_answers, wrong_answers, skipped_answers FROM subjects WHERE subject = '{subject}'")
     rows=sql.fetchall()
@@ -200,7 +205,7 @@ def get_global_statistics(message, subject, call=None):
         accuracy = str(round(int(global_right_answers)*100/(int(global_right_answers)+int(global_wrong_answers)+int(global_skipped_answers)), 2))+'%'
     except ZeroDivisionError: 
         accuracy='поки що неможливо підрахувати'
-    msg = f'{msg}<b>{subjects_dict[subject]}</b>\n🌐 Усього учасників: <b>{users_number}</b>\n\nЗагальних відповідей:\n✅ Правильних - <b>{global_right_answers}</b> (<b>{global_right_percents}%</b> ваших)\n❌ Неправильних - <b>{global_wrong_answers}</b> (<b>{global_wrong_percents}%</b> ваших)\n💨 Пропущених - <b>{global_skipped_answers}</b> (<b>{global_skipped_percents}%</b> ваших)\n\n🎯 Загальна точність: <b>{accuracy}</b>\n\n'
+    msg = f'{msg}<b>{subjects_dict[subject]}</b>\n🌐 Усього учасників: <b>{users_number}/{all_users_number}</b>\n\nЗагальних відповідей:\n✅ Правильних - <b>{global_right_answers}</b> (<b>{global_right_percents}%</b> ваших)\n❌ Неправильних - <b>{global_wrong_answers}</b> (<b>{global_wrong_percents}%</b> ваших)\n💨 Пропущених - <b>{global_skipped_answers}</b> (<b>{global_skipped_percents}%</b> ваших)\n\n🎯 Загальна точність: <b>{accuracy}</b>\n\n'
     msg = f'📈 Результати учасників 📈\n\n{msg}'
     return msg
 

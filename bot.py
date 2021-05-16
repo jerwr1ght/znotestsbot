@@ -296,9 +296,10 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
         if row.get_text()=='' or row.get_text()=='\n':
             continue
         question = question + html_fix(row.contents)+'\n'
+        #if html_fix(row.contents).count("\n")<2:
+        #    question = question + '\n'
     if form.find("div", class_="question").p is None:
-        question = question + html_fix(form.find("div", class_="question").contents)
-
+        question = question + html_fix(form.find("div", class_="question").get_text(strip=True).replace("\n", "", 1))+'\n'
     action = form.find("div", class_="q-info")
     if action==None:
         action = form.find("div", class_="select-answers-title")

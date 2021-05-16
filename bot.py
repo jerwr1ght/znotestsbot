@@ -98,6 +98,42 @@ def sending(message):
             pass
     time.sleep(0.5)
 
+@bot.message_handler(commands=['checkemp'])
+def checking_emp(message):
+    do_give_emp=bot.send_message(message.chat.id,'Введіть слово, наголос якого шукаєте.')
+    bot.register_next_step_handler(do_give_emp, giving_emp)
+    
+def giving_emp(message):
+    url = 'https://ru.osvita.ua/test/advice/65116/'
+    user_msg = message.text
+    headers = {"user-agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36"}
+    req = requests.get(url, headers=headers)
+    soup = BeautifulSoup(req.content, "html.parser")
+    items = soup.find("article").find_all("ul")
+    contents_list=[]
+    for item in items:
+        words = item.find_all("li")
+        for word in words:
+            if word.find_parent(class_='artbutton')!=None:
+                continue
+            contents_list.append(word.get_text(strip=True))
+    found_items=[]
+    for content in contents_list:
+        if '(' in content:
+            index = content.index('(')
+            if user_msg.lower() in content.lower()[:index-1]:
+                found_items.append(content)
+        else:
+            if user_msg.lower() in content.lower():
+                found_items.append(content) 
+    if found_items==[]:
+        bot.reply_to(message, f'⚠️ Не знайдено наголосів для слова <b>"{user_msg.lower()}"</b>.', parse_mode='html')
+    else:
+        msg = f'Знайдено такі наголоси для слова <b>"{user_msg.lower()}"</b>:\n'
+        for item in found_items:
+            msg = f'{msg}• {item}\n'
+        bot.send_message(message.chat.id, msg, parse_mode='html')
+
 @bot.message_handler(commands=['changesub'])
 def changing_sub(message):
     mes = f'Гаразд! Виберіть один із запропонованих предметів.'
@@ -175,7 +211,6 @@ def get_global_statistics(message, subject, call=None):
     if rows==[]:
         return bot.reply_to(message, f"⚠️ Поки що неможливо отримати загальну статистику.")
     all_users_number = len(rows)
-    
     msg=''
     sql.execute(f"SELECT right_answers, wrong_answers, skipped_answers FROM subjects WHERE subject = '{subject}'")
     rows=sql.fetchall()

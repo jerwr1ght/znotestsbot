@@ -291,7 +291,7 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
     question = f'<b>Завдання #{user_question}</b>\n'
     if form.find("iframe")!=None:
         video = form.find("iframe").get("src")
-        question=question+video+'\n'
+        question=f'{question}Необхідне посилання: {video}\n'
     for row in form.find("div", class_="question").find_all("p"):
         if row.get_text()=='' or row.get_text()=='\n':
             continue
@@ -338,7 +338,7 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
                     
                     question = f'{question}\n{number}) {added_item}'
                 if item_answer.find("img")!=None:
-                    answer_img.append(item_answer.find("img").get('src'))
+                    answers_images.append(item_answer.find("img").get('src'))
             question = question+'\n'
     else:
         items = form.find("table").find('tr')

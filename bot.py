@@ -93,7 +93,7 @@ def sending(message):
     rows = sql.fetchall()
     for row in rows:
         try:
-            bot.send_message(row[0], mes, parse_mode='html')
+            bot.send_message(row[0], mes, parse_mode='html', disable_web_page_preview=True)
         except:
             pass
     time.sleep(0.5)

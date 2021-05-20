@@ -337,6 +337,9 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
                     quest_title=item_answer.contents[0]
                     question = f'{question}\n{quest_title}'
                 else:
+                    if item_answer.find("img")!=None:
+                        answers_images.append(item_answer.find("img").get('src'))
+                        continue
                     added_items = item_answer.contents
                     number = item_answer.find("span").get_text(strip=True)
                     answers_list.append(number)
@@ -345,8 +348,6 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
                     added_item=html_fix(added_items)
                     
                     question = f'{question}\n{number}) {added_item}'
-                if item_answer.find("img")!=None:
-                    answers_images.append(item_answer.find("img").get('src'))
             question = question+'\n'
     else:
         items = form.find("table").find('tr')

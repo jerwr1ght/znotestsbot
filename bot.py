@@ -355,7 +355,7 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
             for item_answer in items.find_all("th"):
                 answers_list.append(item_answer.get_text(strip=True))
     
-    img = form.find("img")
+    img = form.find("div", class_="question").find("img")
     if img != None:
         img_link = f"zno.osvita.ua{img.get('src')}"
     else:
@@ -410,8 +410,11 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
         else:
             bot.send_photo(message.chat.id, img_link, caption=send_parts(message, ques_len, img_link, lets_answer_many_markup, question, action), parse_mode='html', reply_markup=lets_answer_many_markup)
     if answers_images!=[]:
-        for i in range(len(answers_images)):
-            bot.send_photo(message.chat.id, answers_images[i], caption=answers_list[i], parse_mode='html')
+        try:
+            for i in range(len(answers_images)):
+                bot.send_photo(message.chat.id, answers_images[i], caption=answers_list[i], parse_mode='html')
+        except IndexError:
+                pass
 def html_fix(added_items):
     added_item=''
     for row in added_items:

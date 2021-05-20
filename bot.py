@@ -429,6 +429,8 @@ def html_fix(added_items):
     added_item = added_item.replace("<br\>", "\n")
     added_item = added_item.replace("</br", "\n")
     added_item = added_item.replace("br", "\n")
+    added_item = added_item.replace("<p>", "")
+    added_item = added_item.replace("</p>", "")
     return added_item
 
 def send_parts(message, ques_len, img_link, reply_markup, question, action):

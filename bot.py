@@ -338,7 +338,8 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
                     question = f'{question}\n{quest_title}'
                 else:
                     if item_answer.find("img")!=None:
-                        answers_images.append(item_answer.find("img").get('src'))
+                        answers_images.append('zno.osvita.ua'+item_answer.find("img").get('src'))
+                        answers_list.append(item_answer.find("span").get_text(strip=True))
                         continue
                     added_items = item_answer.contents
                     number = item_answer.find("span").get_text(strip=True)

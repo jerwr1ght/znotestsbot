@@ -189,6 +189,26 @@ def get_statistics(message, subject, call=None):
             msg = f'{msg}<b>{sub_to_right(res[1])}</b>\nВідповідей:\n✅ Правильних - <b>{res[2]}</b>\n❌ Неправильних - <b>{res[3]}</b>\n💨 Пропущених - <b>{res[4]}</b>\n\n🎯 Точність: <b>{round(int(res[2])*100/(int(res[2])+int(res[3])+int(res[4])), 2)}%</b>\n\nЗараз на запитанні: <b>{res[5]}/{last_ques_check(res[1])}</b>\n\n'
         except ZeroDivisionError:
             msg = f'{msg}<b>{sub_to_right(res[1])}</b>\nВідповідей:\n✅ Правильних - <b>{res[2]}</b>\n❌ Неправильних - <b>{res[3]}</b>\n💨 Пропущених - <b>{res[4]}</b>\n\n🎯 Точність: неможливо підрахувати на першому запитанні\n\nЗараз на запитанні: <b>{res[5]}/{last_ques_check(res[1])}</b>\n\n'
+        sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}'")
+        rows=sql.fetchall()
+        table_dict={}
+        for row in rows:
+            table_dict.update({row[1]:round(int(row[2])*100/(int(row[2])+int(row[3])+int(row[4])), 2)})
+        worst_list={}
+        worst_list.update({res[1]:table_dict[res[1]]})
+        worst_list_sub=res[1]
+        for sub in table_dict.keys():
+            if table_dict[sub]<worst_list[worst_list_sub]:
+                worst_list.clear()
+                worst_list.update({sub:table_dict[sub]})
+                worst_list_sub=sub
+            elif table_dict[sub]==worst_list[worst_list_sub]:
+                worst_list.update({sub:table_dict[sub]})
+        msg = f'{msg}Результати з таких предметів (вибрано за точністю), як:'
+        for sub in worst_list.keys():
+            msg = f'{msg} <b>{sub_to_right(sub)}</b>,'
+            percents=worst_list[sub]
+        msg = f'{msg[:len(msg)-1]} (<b>{percents}%</b>) є найнижчими серед інших. Однак усе ще попереду!\n\n'
         return msg
     else:
         return bot.reply_to(message, f"⚠️ Ви не проходили тести з цього предмету.")

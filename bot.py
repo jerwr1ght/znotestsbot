@@ -206,7 +206,7 @@ def get_statistics(message, subject, call=None):
                 worst_list_sub=sub
             elif table_dict[sub]==worst_list[worst_list_sub]:
                 worst_list.update({sub:table_dict[sub]})
-        msg = f'{msg}Результати з таких предметів (вибрано за точністю), як:'
+        msg = f'{msg}Результати з таких предметів (визначено за точністю), як:'
         for sub in worst_list.keys():
             msg = f'{msg} <b>{sub_to_right(sub)}</b>,'
             percents=worst_list[sub]

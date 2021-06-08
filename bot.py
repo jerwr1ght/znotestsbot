@@ -271,6 +271,24 @@ def get_global_statistics(message, subject, call=None):
         accuracy='поки що неможливо підрахувати'
     msg = f'{msg}<b>{subjects_dict[subject]}</b>\n🌐 Усього учасників: <b>{users_number}/{all_users_number}</b>\n\nЗагальних відповідей:\n✅ Правильних - <b>{global_right_answers}</b> (<b>{global_right_percents}%</b> ваших)\n❌ Неправильних - <b>{global_wrong_answers}</b> (<b>{global_wrong_percents}%</b> ваших)\n💨 Пропущених - <b>{global_skipped_answers}</b> (<b>{global_skipped_percents}%</b> ваших)\n\n🎯 Загальна точність: <b>{accuracy}</b>\n\n'
     msg = f'📈 Результати учасників 📈\n\n{msg}'
+    sql.execute(f"SELECT chatid, right_answers FROM subjects WHERE subject = '{subject}' ORDER by right_answers DESC")
+    rows=sql.fetchall()
+    print(rows)
+    if len(rows)<=1:
+        return msg
+    counter = 0
+    for row in rows:
+        previous_amount=rows[counter-1][1]
+        counter += 1
+        if int(row[0])==message.chat.id:
+            if previous_amount==row[1] and counter-2>=0:
+                counter -= 1
+            break
+    user_rating=100-round((counter*100)/len(rows))
+    if user_rating==0:
+        msg=f'{msg}За кількістю правильних відповідей ви посідаєте останнє місце серед інших користувачів. Однак усе ще попереду!\n\n'
+        return msg
+    msg = f'{msg}За кількістю правильних відповідей ви посідаєте <b>{counter}/{len(rows)}</b> місце. Ваші результати з цього предмету краще, ніж у <b>{user_rating}%</b> користувачів.\n\n'
     return msg
 
 

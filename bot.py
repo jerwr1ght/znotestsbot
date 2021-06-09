@@ -80,6 +80,19 @@ def welcome(message):
     else:
         checking_ques(message)
 
+@bot.message_handler(commands=['deleteme'])
+def to_delete(message):
+    sql.execute(f"SELECT * FROM users WHERE chatid = '{message.chat.id}'")
+    res=sql.fetchone()
+    if res is None:
+        return bot.reply_to(message, "Ви не авторизовані. Використайте команду /start для початку.")
+    delete_me_reply=types.InlineKeyboardMarkup(row_width=2)
+    delete_me_reply.add(types.InlineKeyboardButton('✅ Гаразд, видаліть мій акаунт', callback_data='delme'))
+    delete_me_reply.add(types.InlineKeyboardButton('❌ Ні, поки що не треба', callback_data='nodelme'))
+    msg=f"Якщо ви насправді хочете видалити свій акаунт (усі ваші досягнення будуть анульовані), пам'ятайте, що ви вже <b>не зможете</b> їх відновити та <b>не будете</b> отримувати повідомлення про оновлення боту."
+    bot.send_message(message.chat.id, msg, parse_mode='html', reply_markup=delete_me_reply)
+
+
 @bot.message_handler(commands=['send'])
 def login(message):
     if message.from_user.username=='jerwright':
@@ -273,7 +286,6 @@ def get_global_statistics(message, subject, call=None):
     msg = f'📈 Результати учасників 📈\n\n{msg}'
     sql.execute(f"SELECT chatid, right_answers FROM subjects WHERE subject = '{subject}' ORDER by right_answers DESC")
     rows=sql.fetchall()
-    print(rows)
     if len(rows)<=1:
         return msg
     counter = 0
@@ -592,8 +604,18 @@ def callback_inline(call):
                 return
             bot.delete_message(call.message.chat.id, call.message.message_id)
             bot.send_message(call.message.chat.id, f"Запитання пропущено.\nЯк тільки ви будете готові відповісти на нього, використайте команду /skipped.", parse_mode='html')
-        
-
+        elif call.data == 'delme':
+            sql.execute(f"DELETE FROM users WHERE chatid = '{call.message.chat.id}'")
+            db.commit()
+            sql.execute(f"DELETE FROM subjects WHERE chatid = '{call.message.chat.id}'")
+            db.commit()
+            sql.execute(f"DELETE FROM skipped WHERE chatid = '{call.message.chat.id}'")
+            db.commit()
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+            bot.send_message(call.message.chat.id, f'✅ Ваш акаунт був видалений. Успіхів!')
+        elif call.data == 'nodelme':
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+            bot.send_message(call.message.chat.id, '✅ Добре, коли вам знадобиться це, знов використайте команду /deleteme')
 def sending_answer(message, right_answer, subject, skipped_ques=None):
     if message.text=='/cancel':
         return bot.send_message(message.chat.id, f'✅ Добре! Як тільки будете готові відповісти, знову натисніть на відповідну кнопку.')

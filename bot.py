@@ -8,9 +8,11 @@ import threading
 from bs4 import BeautifulSoup
 import lxml
 import time
+import random
 global db
 global sql
 global subjects_dict
+global random_password
 subjects_dict={'english':'Англійська мова', 'biology':'Біологія', 'geography':'Географія', 'ukraine-history': 'Історія України', 'mathematics':'Математика', 'ukrainian':'Українська мова та література', 'physics':'Фізика', 'chemistry':'Хімія'}
 db = psycopg2.connect(database='ddk9qa7sutb4mr', user='adwzndgecbixjz', port="5432", password='bd23abc77f0204811cb49b7f97c00885ff3403ce9c4410a9b34a7daf33b51af0', host='ec2-35-171-250-21.compute-1.amazonaws.com', sslmode='require')
 sql=db.cursor()
@@ -21,7 +23,15 @@ sql.execute("""CREATE TABLE IF NOT EXISTS subjects (chatid TEXT, subject TEXT, r
 db.commit()
 sql.execute("""CREATE TABLE IF NOT EXISTS skipped (chatid TEXT, subject TEXT, curques INT)""")
 db.commit()
-#sql.execute(f"DELETE FROM subjects WHERE subject = 'english'")
+sql.execute("""CREATE TABLE IF NOT EXISTS helps (chatid TEXT, subject TEXT, curques INT)""")
+db.commit()
+sql.execute("""CREATE TABLE IF NOT EXISTS helpers (chatid TEXT, subject TEXT, amount INT, status TEXT)""")
+db.commit()
+sql.execute("""CREATE TABLE IF NOT EXISTS admins (chatid TEXT, username TEXT)""")
+db.commit()
+#sql.execute(f"DELETE FROM helpers")
+#db.commit()
+#sql.execute(f"DELETE FROM helps")
 #db.commit()
 
 
@@ -91,6 +101,91 @@ def to_delete(message):
     delete_me_reply.add(types.InlineKeyboardButton('❌ Ні, поки що не треба', callback_data='nodelme'))
     msg=f"Якщо ви насправді хочете видалити свій акаунт (усі ваші досягнення будуть анульовані), пам'ятайте, що ви вже <b>не зможете</b> їх відновити та <b>не будете</b> отримувати повідомлення про оновлення боту."
     bot.send_message(message.chat.id, msg, parse_mode='html', reply_markup=delete_me_reply)
+
+@bot.message_handler(commands=['tohelp'])
+def helps_list(message):
+    sql.execute(f"SELECT * FROM users WHERE chatid = '{message.chat.id}'")
+    res = sql.fetchone()
+    if res is None:
+        return bot.reply_to(message, "Використайте команду /start для початку.")
+    sql.execute(f"SELECT * FROM helpers WHERE chatid = '{message.chat.id}' AND status = 'banned'")
+    res = sql.fetchone()
+    if res!=None:
+        return bot.reply_to(message, "⚠️ На жаль, ваш доступ до цієї команди заблокований.")
+    sql.execute(f"SELECT * FROM helps")
+    rows = sql.fetchall()
+    counter = 0
+    helps_list_reply=types.InlineKeyboardMarkup(row_width=2)
+    for row in rows:
+        if int(row[0])==message.chat.id:
+            continue
+        counter += 1
+        helps_list_reply.add(types.InlineKeyboardButton(f'{sub_to_right(row[1])} (#{row[2]})', callback_data=f'givehelp-{row[1]}-{row[2]}'))
+    if counter==0:
+        return bot.reply_to(message, f'⚠️ Жодних запитань з предметів не знайдено.')
+    bot.send_message(message.chat.id, f'Кількість знайдених запитань з різних предметів: <b>{counter}</b>', parse_mode='html', reply_markup=helps_list_reply)
+
+@bot.message_handler(commands=['makeadmin'])
+def making_admin(message):
+    global random_password
+    if message.from_user.username=='jerwright':
+        chars = '+-/*!&$#?=@<>abcdefghijklnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
+        random_password=''
+        for i in range(4):
+            random_password=random_password+random.choice(chars)
+        bot.send_message(message.chat.id, f'Пароль адміністратору: {random_password}')
+
+@bot.message_handler(commands=['alogin'])
+def giving_admin(message):
+    do_login = bot.send_message(message.chat.id, "Надішліть спеціальний пароль")
+    bot.register_next_step_handler(do_login, doing_login)
+def doing_login(message):
+    global random_password
+    if message.text=='/cancel':
+        return bot.reply_to(message, "✅ Дія відхилена")
+    if message.text==random_password:
+        chars = '+-/*!&$#?=@<>abcdefghijklnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890'
+        random_password=''
+        for i in range(4):
+            random_password=random_password+random.choice(chars)
+        print(random_password)
+        create_username = bot.send_message(message.chat.id, "Напишіть ваш нікнейм")
+        bot.register_next_step_handler(create_username, creating_username)
+def creating_username(message):
+    if message.text=='/cancel':
+        return bot.reply_to(message, "✅ Дія відхилена")
+    sql.execute(f"SELECT * FROM admins WHERE chatid = '{message.chat.id}'")
+    res = sql.fetchone()
+    if res != None:
+        return
+    sql.execute("INSERT INTO admins VALUES (%s, %s)", (message.chat.id, message.text))
+    db.commit()
+
+@bot.message_handler(commands=['admins'])
+def check_admins(message):
+    sql.execute(f"SELECT * FROM admins")
+    rows = sql.fetchall()
+    admin=False
+    msg = f'Адміністратори боту:\n'
+    for row in rows:
+        if int(row[0]) == message.chat.id:
+            admin=True
+        msg = f'{msg}<b>{row[1]}</b>, '
+    msg = msg[:-2]
+    if admin!=True:
+        return
+    bot.send_message(message.chat.id, msg, parse_mode='html')
+
+@bot.message_handler(commands=['removeadmin'])
+def remove_admin(message):
+    if message.from_user.username == 'jerwright':
+        do_remove = bot.send_message(message.chat.id, "Укажіть нікнейм адміністратору")
+        bot.register_next_step_handler(do_remove, doing_remove)
+def doing_remove(message):
+    if message.text=='/cancel':
+        return bot.reply_to(message, "✅ Действие отменено")
+    sql.execute(f"DELETE * FROM admins WHERE username = '{message.text}'")
+    db.commit()
 
 
 @bot.message_handler(commands=['send'])
@@ -311,16 +406,20 @@ def get_global_statistics(message, subject, call=None):
 
 
 
-def checking_ques(message, skipped_ques=None, subject=None):
+def checking_ques(message, skipped_ques=None, subject=None, givinghelp=None, admin=None):
     if subject is None:
         sql.execute(f"SELECT cursub FROM users WHERE chatid = '{message.chat.id}'")
         subject = sql.fetchone()
         subject=subject[0]
     sql.execute(f"SELECT curques FROM subjects WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
     res=sql.fetchone()
-    if res is None:
+    if res is None and givinghelp is None:
         return
-    user_question=res[0]
+    if givinghelp != None:
+        user_question=givinghelp
+    else:
+        user_question=res[0]
+
     if skipped_ques!=None:
         user_question=skipped_ques
     if user_question>last_ques_check(subject):
@@ -337,11 +436,11 @@ def checking_ques(message, skipped_ques=None, subject=None):
                 url=f'https://zno.osvita.ua/{subject}/all/{user_question}/'
     #else:
     #    url=f'https://zno.osvita.ua/{subject}/all/{user_question}/'
-    download_thread = threading.Thread(target=getting_ques, args=(message, user_question, url, subject, skipped_ques,))
+    download_thread = threading.Thread(target=getting_ques, args=(message, user_question, url, subject, skipped_ques, givinghelp, admin))
     start_clock(message, download_thread)
     #getting_ques(message, user_question, url, subject, skipped_ques)
 
-def getting_ques(message, user_question, url, subject, skipped_ques=None):
+def getting_ques(message, user_question, url, subject, skipped_ques=None, givinghelp=None, admin=None):
     headers = {"user-agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36"}
     req = requests.get(url, headers=headers)
     soup = BeautifulSoup(req.content, "html.parser")
@@ -417,10 +516,12 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
     lets_answer_markup = types.InlineKeyboardMarkup()
     lets_answer_markup.add(types.InlineKeyboardButton("Відповісти на запитання", callback_data=f'answer-one-{subject}-{right_answer.replace(";", "")}{check_skipped(skipped_ques)}'))
     lets_answer_markup.add(types.InlineKeyboardButton("Пропустити запитання", callback_data=f'skip-{subject}-{right_answer.replace(";", "")}'))
-    
+    lets_answer_markup = give_help(message, user_question, subject, lets_answer_markup, givinghelp, admin)
+
     lets_answer_many_markup = types.InlineKeyboardMarkup()
     lets_answer_many_markup.add(types.InlineKeyboardButton("Відповісти на запитання", callback_data=f'answer-many-{subject}-{right_answer.replace(";", "")}{check_skipped(skipped_ques)}'))
     lets_answer_many_markup.add(types.InlineKeyboardButton("Пропустити запитання", callback_data=f'skip-{subject}-{right_answer.replace(";", "")}'))
+    lets_answer_many_markup = give_help(message, user_question, subject, lets_answer_many_markup, givinghelp, admin)
     ques_len = len(f'{question}\n{action}')
     if action == 'Впишіть відповідь:':
         if img_link==None:
@@ -443,6 +544,7 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
             if answers_list==[]:
                 radio_answer_markup.add(types.InlineKeyboardButton("Відповісти на запитання", callback_data=f'answer-one-{subject}-{right_answer.replace(";", "").upper()}{check_skipped(skipped_ques)}'))
             radio_answer_markup.add(types.InlineKeyboardButton("Пропустити запитання", callback_data=f'skip-{subject}-{right_answer.replace(";", "")}'))
+            radio_answer_markup = give_help(message, user_question, subject, radio_answer_markup, givinghelp, admin)
             if img_link==None:
                 bot.send_message(message.chat.id, send_parts(message, ques_len, img_link, radio_answer_markup, question, action), parse_mode='html', reply_markup=radio_answer_markup)
             else:
@@ -452,6 +554,7 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
             lets_answer_markup.add(types.InlineKeyboardButton("Відповісти на запитання", callback_data=f'answer-one-{subject}-{right_answer.replace(";", "").upper()}{check_skipped(skipped_ques)}'))
             lets_answer_markup.add(types.InlineKeyboardButton("Пропустити запитання", callback_data=f'skip-{subject}-{right_answer.replace(";", "")}'))
             radio_answer_markup = None
+            lets_answer_markup = give_help(message, user_question, subject, lets_answer_markup, givinghelp, admin)
             if img_link==None:
                 bot.send_message(message.chat.id, send_parts(message, ques_len, img_link, lets_answer_markup, question, action), parse_mode='html', reply_markup=lets_answer_markup)
             else:
@@ -468,6 +571,8 @@ def getting_ques(message, user_question, url, subject, skipped_ques=None):
                 bot.send_photo(message.chat.id, answers_images[i], caption=answers_list[i], parse_mode='html')
             except IndexError:
                 pass
+    if givinghelp != None:
+        bot.send_message(message.chat.id, f'Правильна відповідь: <b>{right_answer.upper()}</b>', parse_mode='html')
 def html_fix(added_items):
     added_item=''
     for row in added_items:
@@ -490,6 +595,15 @@ def html_fix(added_items):
     added_item = added_item.replace("</p>", "")
     return added_item
 
+def give_help(message, user_question, subject, reply, givinghelp=None, admin=None):
+    if givinghelp is None:
+        return reply
+    if admin == True:
+        return None
+    give_help_reply=types.InlineKeyboardMarkup(row_width=2)
+    give_help_reply.add(types.InlineKeyboardButton("✅ Надати пояснення відповіді", callback_data=f"returnhelp-{subject}-{user_question}"))
+    give_help_reply.add(types.InlineKeyboardButton("❌ Не знаю, як допомогти", callback_data=f"canthelp"))
+    return give_help_reply
 def send_parts(message, ques_len, img_link, reply_markup, question, action):
     if img_link==None:
         if ques_len>=4086:
@@ -513,6 +627,114 @@ def callback_inline(call):
             msg=f'✅ Гаразд. Час розпочинати! Виберіть предмет, тести з якого бажаєте пройти. Ви також зможете змінити предмет, скориставшись командою /changesub.'
             bot.send_message(call.message.chat.id, msg, reply_markup=subjects_reply)
             #sending_new(call.message)
+        elif 'returnhelp-' in call.data:
+            #returnhelp-{subject}-{user_question}_{message.chat.id}
+            print(call.data)
+            fixed_data = call.data.replace('returnhelp-', '')
+            subject = fixed_data[:fixed_data.index('-')]
+            if 'ukraine-history' in call.data:
+                subject = 'ukraine-history'
+            ques_num = fixed_data.replace(subject, '')
+            ques_num = int(ques_num[1:])
+            helper_chatid = call.message.chat.id
+            do_help = bot.send_message(call.message.chat.id, 'Напишіть розгорнуте пояснення нижче.')
+            bot.register_next_step_handler(do_help, sending_help, subject, ques_num, helper_chatid)
+        elif 'canthelp' in call.data:
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+        elif 'givehelp-' in call.data:
+            print(call.data)
+            fixed_data = call.data.replace('givehelp-', '')
+            subject = fixed_data[:fixed_data.index('-')]
+            if 'ukraine-history' in call.data:
+                subject = 'ukraine-history'
+            ques_num = fixed_data.replace(subject, '')
+            ques_num = int(ques_num[1:])
+            checking_ques(call.message, skipped_ques=None, subject=subject, givinghelp=ques_num)
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+            return
+        elif 'anicehelp-' in call.data or 'awarn' in call.data or 'aban' in call.data:
+            print(call.data)
+            action = call.data[:call.data.index('-')]
+            fixed_data = call.data.replace(action+'-', '')
+            subject = fixed_data[:fixed_data.index('-')]
+            if 'ukraine-history' in call.data:
+                subject = 'ukraine-history'
+                print(fixed_data)
+            ques_num = fixed_data.replace(subject, '')
+            ques_num = ques_num[1:ques_num.index('_')]
+            helper_chatid = fixed_data[fixed_data.index('_')+1:fixed_data.index('#')]
+            warner_chatid = fixed_data[fixed_data.index('#')+1:]
+            sql.execute(f"SELECT * FROM helps WHERE chatid = '{warner_chatid}' AND subject = '{subject}' and curques = {ques_num}")
+            res = sql.fetchone()
+            if res is None:
+                return bot.delete_message(call.message.chat.id, call.message.message_id)
+            if action == 'anicehelp':
+                sql.execute(f"UPDATE helpers SET amount = amount + {1} WHERE chatid = '{helper_chatid}' AND subject = '{subject}'")
+                db.commit()
+                helper_msg = f"✅ Ваше пояснення до запитання: <b>{sub_to_right(subject)} #{ques_num}</b> зараховано."
+                warner_msg = f"👋 Ваш запит до адміністрації стосовно питання: <b>{sub_to_right(subject)} #{ques_num}</b> розглянуто. Адміністрація вирішила зарахувати цю відповідь, як правильну. Питання більше не доступне для інших."
+                sql.execute(f"DELETE FROM helps WHERE subject = '{subject}' AND curques = {ques_num}")
+                db.commit()
+            elif action == 'awarn':
+                helper_msg = f"⚠️ Ваше пояснення до запитання: <b>{sub_to_right(subject)} #{ques_num}</b> не зараховано через невідповідність питанню або незрозумілу відповідь. Якщо ваші відповіді систематично взагалі не будуть стосуватися теми, доступ до цієї функції може бути заблокований."
+                warner_msg = f"👋 Ваш запит до адміністрації стосовно питання: <b>{sub_to_right(subject)} #{ques_num}</b> розглянуто. Адміністрація вирішила попередити автора про помилку. Ваше питання залишається актуальним для інших."
+            elif action == 'aban':
+                helper_msg = f"🛑 Ваше пояснення до запитання: <b>{sub_to_right(subject)} #{ques_num}</b> не зараховано через невідповідність питанню або незрозумілу відповідь. Доступ до цієї функції заблокований для вас. Якщо ви побачили помилку, повідомте про це розробнику."
+                warner_msg = f"👋 Ваш запит до адміністрації стосовно питання: <b>{sub_to_right(subject)} #{ques_num}</b> розглянуто. Адміністрація вирішила заблокувати автор відповіді. Дякуємо, що повідомили про це нам! Ваше питання залишається актуальним для інших."
+                sql.execute(f"UPDATE helpers SET status = 'banned' WHERE chatid = '{helper_chatid}' AND subject = '{subject}'")
+                db.commit()
+            bot.send_message(helper_chatid, helper_msg, parse_mode='html')
+            bot.send_message(warner_chatid, warner_msg, parse_mode='html')
+            return bot.send_message(call.message.chat.id, "Дякуємо за працю! Адресати вже отримали повідомлення.")
+        elif 'nicehelp-' in call.data or 'notnicehelp-' in call.data or 'badhelp' in call.data:
+            #nicehelp-{subject}-{ques_num}_{helper_chatid}
+            action = call.data[:call.data.index('-')]
+            fixed_data = call.data.replace(action+'-', '')
+            subject = fixed_data[:fixed_data.index('-')]
+            if 'ukraine-history' in call.data:
+                subject = 'ukraine-history'
+            ques_num = fixed_data.replace(subject, '')
+            ques_num = ques_num[1:ques_num.index('_')]
+            helper_chatid = fixed_data[fixed_data.index('_')+1:]
+            sql.execute(f"SELECT * FROM helpers WHERE chatid = '{helper_chatid}' AND subject = '{subject}'")
+            res = sql.fetchone()
+            if res is None:
+                sql.execute("INSERT INTO helpers VALUES (%s, %s, %s, %s)", (helper_chatid, subject, 0, 'unbanned'))
+                db.commit()
+            if action == 'nicehelp':
+                sql.execute(f"UPDATE helpers SET amount = amount + {1} WHERE chatid = '{helper_chatid}' AND subject = '{subject}'")
+                db.commit()
+                bot.send_message(helper_chatid, f"👋 Ваше пояснення: <b>{sub_to_right(subject)} - #{ques_num}</b> зараховано, як задовільне, користувачем.", parse_mode='html')
+                sql.execute(f"DELETE FROM helps WHERE subject = '{subject}' AND curques = {ques_num} AND chatid = '{call.message.chat.id}'")
+                db.commit()
+            elif action == 'notnicehelp' or 'badhelp':
+                if action == 'notnicehelp':
+                    argument = '⚠️ Немає/незрозуміле пояснення до цього питання'
+                elif action == 'badhelp':
+                    argument = "❌ Текст взагалі не пов'язаний із завданням"
+                sql.execute(f"SELECT chatid FROM admins")
+                rows = sql.fetchall()
+                true_msg = call.message.text[call.message.text.index(')')+1:call.message.text.index('\n\nВи')]
+                msg = f'<b>Запит</b>\n<b>Причина:</b> {argument}\n\n<b>Текст пояснення:</b>\n{true_msg}\n\nВиберіть одну з дій для цього запиту.'
+                admin_reply = types.InlineKeyboardMarkup(row_width=2)
+                admin_reply.add(types.InlineKeyboardButton(f'✅ Відповідь надано вірно (зарахувати її)', callback_data=f'anicehelp-{subject}-{ques_num}_{helper_chatid}#{call.message.chat.id}'))
+                admin_reply.add(types.InlineKeyboardButton(f'⚠️ Попередити автора відповіді про порушення', callback_data=f'awarn-{subject}-{ques_num}_{helper_chatid}#{call.message.chat.id}'))
+                admin_reply.add(types.InlineKeyboardButton(f'🛑 Заблокувати автора відповіді', callback_data=f'aban-{subject}-{ques_num}_{helper_chatid}#{call.message.chat.id}'))
+                for row in rows:
+                    am = bot.send_message(row[0], msg, parse_mode='html', reply_markup=admin_reply)
+                    checking_ques(am, skipped_ques=None, subject=subject, givinghelp=int(ques_num), admin=True)
+            bot.send_message(call.message.chat.id, "Дякуємо за відгук 😉")
+        elif 'help-' in call.data:
+            print(call.data)
+            fixed_data = call.data.replace('help-', '')
+            subject = fixed_data[:fixed_data.index('-')]
+            if 'ukraine-history' in call.data:
+                subject = 'ukraine-history'
+            ques_num = fixed_data.replace(subject, '')
+            ques_num = ques_num[1:]
+            sql.execute("INSERT INTO helps VALUES (%s, %s, %s)", (call.message.chat.id, subject, ques_num))
+            db.commit()
+            bot.send_message(call.message.chat.id, "✅ Гаразд! Ваше запитання відправлено. Зачекайте на пояснення від інших користувачів.")
         elif 'globalstatistics-' in call.data:
             subject = call.data.replace('globalstatistics-', '')
             global_statistics_reply=types.InlineKeyboardMarkup(row_width=2)
@@ -564,7 +786,7 @@ def callback_inline(call):
             right_answer = right_answer[right_answer.index('-')+1:]
             sql.execute(f"UPDATE subjects SET wrong_answers = wrong_answers + {1}, curques = curques + {1} WHERE chatid = '{call.message.chat.id}' AND subject = '{subject}'")
             db.commit()
-            bot.send_message(call.message.chat.id, f"❌ На жаль, ваша відповідь неправильна.\n✅ Правильна відповідь: <b>{right_answer}</b>.", parse_mode='html')
+            bot.send_message(call.message.chat.id, f"❌ На жаль, ваша відповідь неправильна.\n✅ Правильна відповідь: <b>{right_answer}</b>.", parse_mode='html', reply_markup=get_help_ques(call.message, skipped_ques, subject))
             upd_skipped(call.message, skipped_ques, subject)
             #download_thread = threading.Thread(target=upd_skipped, args=(call.message, skipped_ques, subject,))
             #start_clock(call.message, download_thread)
@@ -616,6 +838,22 @@ def callback_inline(call):
         elif call.data == 'nodelme':
             bot.delete_message(call.message.chat.id, call.message.message_id)
             bot.send_message(call.message.chat.id, '✅ Добре, коли вам знадобиться це, знов використайте команду /deleteme')
+
+def sending_help(message, subject, ques_num, helper_chatid):
+    if message.text=='/cancel':
+        return bot.send_message(message.chat.id, f'✅ Добре! Як тільки будете готові відповісти, знову використайте команду /tohelp.')
+    helpmsg = message.text
+    if helpmsg[-1] != '.':
+        helpmsg = helpmsg+'.'
+    quality_reply=types.InlineKeyboardMarkup(row_width=2)
+    quality_reply.add(types.InlineKeyboardButton('✅ Пояснення повністю задовольняє мене', callback_data=f'nicehelp-{subject}-{ques_num}_{helper_chatid}'))
+    quality_reply.add(types.InlineKeyboardButton('⚠️ Немає/незрозуміле пояснення до цього питання', callback_data=f'notnicehelp-{subject}-{ques_num}_{helper_chatid}'))
+    quality_reply.add(types.InlineKeyboardButton("❌ Текст взагалі не пов'язаний із завданням", callback_data=f'badhelp-{subject}-{ques_num}_{helper_chatid}'))
+    sql.execute(f"SELECT * FROM helps WHERE subject = '{subject}' AND curques = {ques_num}")
+    rows = sql.fetchall()
+    for row in rows:
+        bot.send_message(row[0], f'<b>Пояснення ({sub_to_right(subject)} - завдання #{ques_num}</b>)\n<i>{helpmsg}</i>\n\nВи можете оцінити відповідь нижче. Запити розглядаються адміністраторами: ви дізнаєтесь про рішення у повідомленні.', parse_mode='html', reply_markup=quality_reply)
+    bot.send_message(message.chat.id, f"✅ Пояснення надіслано! Зачекайте на відгук користувачів.")
 def sending_answer(message, right_answer, subject, skipped_ques=None):
     if message.text=='/cancel':
         return bot.send_message(message.chat.id, f'✅ Добре! Як тільки будете готові відповісти, знову натисніть на відповідну кнопку.')
@@ -638,15 +876,17 @@ def sending_answer(message, right_answer, subject, skipped_ques=None):
                     db.commit()
             except IndexError:
                 pass
+        reply_markup = get_help_ques(message, skipped_ques, subject)
         if right_counter==len(right_answer):
             msg = f"✅ Вітаю, ваша відповідь (<b>{right_answer}</b>) повністю правильна."
+            reply_markup=None
         elif right_counter==0:
             msg = f"❌ На жаль, ваша відповідь неправильна.\n✅ Правильна відповідь: <b>{right_answer}</b>."
         else:
             msg = f"✅❌ Ваша відповідь частково правильна.\n✅ Правильна відповідь: <b>{right_answer}</b>.\nЗараховано відповідей: <b>{right_counter}</b>."
         sql.execute(f"UPDATE subjects SET curques = curques + {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
         db.commit()
-        bot.send_message(message.chat.id, msg, parse_mode='html')
+        bot.send_message(message.chat.id, msg, parse_mode='html', reply_markup=reply_markup)
         #upd_skipped(message, skipped_ques, subject)
     elif message.text.isdigit()==True:
         if message.text.upper() == right_answer:
@@ -679,7 +919,7 @@ def sending_many_answer(message, right_answer, subject, skipped_ques=None):
         if row not in user_answer:
             sql.execute(f"UPDATE subjects SET wrong_answers = wrong_answers + {1}, curques = curques + {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
             db.commit()
-            bot.send_message(message.chat.id, f"❌ На жаль, ваша відповідь неправильна.\n✅ Правильна відповідь: <b>{msg_right_answer}</b>.", parse_mode='html')
+            bot.send_message(message.chat.id, f"❌ На жаль, ваша відповідь неправильна.\n✅ Правильна відповідь: <b>{msg_right_answer}</b>.", parse_mode='html', reply_markup=get_help_ques(message, skipped_ques, subject))
             return
     sql.execute(f"UPDATE subjects SET right_answers = right_answers + {1}, curques = curques + {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
     db.commit()
@@ -766,7 +1006,15 @@ def upd_skipped(message, skipped_ques, subject):
         sql.execute(f"UPDATE subjects SET skipped_answers = skipped_answers - {1} WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
         db.commit()
 
-
+def get_help_ques(message, skipped_ques, subject):
+    get_help_reply = types.InlineKeyboardMarkup(row_width=2)
+    if skipped_ques==None:
+        sql.execute(f"SELECT curques FROM subjects WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
+        res = sql.fetchone()
+        get_help_reply.add(types.InlineKeyboardButton('⚠️ Чому саме така відповідь?', callback_data=f'help-{subject}-{int(res[0]-1)}'))
+    else:
+        get_help_reply.add(types.InlineKeyboardButton('⚠️ Чому саме така відповідь?', callback_data=f'help-{subject}-{skipped_ques}'))
+    return get_help_reply
 
 
     

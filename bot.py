@@ -306,9 +306,9 @@ def get_statistics(message, subject, call=None):
     if res!=None:
         msg = f'📈 Ваші результати 📈\n\n'
         try:
-            msg = f'{msg}<b>{sub_to_right(res[1])}</b>\nВідповідей:\n✅ Правильних - <b>{res[2]}</b>\n❌ Неправильних - <b>{res[3]}</b>\n💨 Пропущених - <b>{res[4]}</b>\n\n🙏 Пояснень: {help_count}\n\n🎯 Точність: <b>{round(int(res[2])*100/(int(res[2])+int(res[3])+int(res[4])), 2)}%</b>\n\n💪 Зараз на запитанні: <b>{res[5]}/{last_ques_check(res[1])}</b>\n\n'
+            msg = f'{msg}<b>{sub_to_right(res[1])}</b>\nВідповідей:\n✅ Правильних - <b>{res[2]}</b>\n❌ Неправильних - <b>{res[3]}</b>\n💨 Пропущених - <b>{res[4]}</b>\n\n🎯 Точність: <b>{round(int(res[2])*100/(int(res[2])+int(res[3])+int(res[4])), 2)}%</b>\n\n💪 Зараз на запитанні: <b>{res[5]}/{last_ques_check(res[1])}</b>\n\n🙏 Пояснень: {help_count}\n\n'
         except ZeroDivisionError:
-            msg = f'{msg}<b>{sub_to_right(res[1])}</b>\nВідповідей:\n✅ Правильних - <b>{res[2]}</b>\n❌ Неправильних - <b>{res[3]}</b>\n💨 Пропущених - <b>{res[4]}</b>\n\n🙏 Пояснень: {help_count}\n\n🎯 Точність: неможливо підрахувати на першому запитанні\n\n💪 Зараз на запитанні: <b>{res[5]}/{last_ques_check(res[1])}</b>\n\n'
+            msg = f'{msg}<b>{sub_to_right(res[1])}</b>\nВідповідей:\n✅ Правильних - <b>{res[2]}</b>\n❌ Неправильних - <b>{res[3]}</b>\n💨 Пропущених - <b>{res[4]}</b>\n\n🎯 Точність: неможливо підрахувати на першому запитанні\n\n💪 Зараз на запитанні: <b>{res[5]}/{last_ques_check(res[1])}</b>\n\n🙏 Пояснень: {help_count}\n\n'
         sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}'")
         rows=sql.fetchall()
         if len(rows)<=1:
@@ -404,7 +404,7 @@ def get_global_statistics(message, subject, call=None):
         accuracy = str(round(int(global_right_answers)*100/(int(global_right_answers)+int(global_wrong_answers)+int(global_skipped_answers)), 2))+'%'
     except ZeroDivisionError: 
         accuracy='поки що неможливо підрахувати'
-    msg = f'{msg}<b>{subjects_dict[subject]}</b>\n🌐 Усього учасників: <b>{users_number}/{all_users_number}</b>\n\nЗагальних відповідей:\n✅ Правильних - <b>{global_right_answers}</b> (<b>{global_right_percents}%</b> ваших)\n❌ Неправильних - <b>{global_wrong_answers}</b> (<b>{global_wrong_percents}%</b> ваших)\n💨 Пропущених - <b>{global_skipped_answers}</b> (<b>{global_skipped_percents}%</b> ваших)\n\n🙏 Загальних пояснень: <b>{global_help_count}</b> (<b>{global_help_percents}%</b> ваших)\n\n🎯 Загальна точність: <b>{accuracy}</b>\n\n'
+    msg = f'{msg}<b>{subjects_dict[subject]}</b>\n🌐 Усього учасників: <b>{users_number}/{all_users_number}</b>\n\nЗагальних відповідей:\n✅ Правильних - <b>{global_right_answers}</b> (<b>{global_right_percents}%</b> ваших)\n❌ Неправильних - <b>{global_wrong_answers}</b> (<b>{global_wrong_percents}%</b> ваших)\n💨 Пропущених - <b>{global_skipped_answers}</b> (<b>{global_skipped_percents}%</b> ваших)\n\n🎯 Загальна точність: <b>{accuracy}</b>\n\n🙏 Загальних пояснень: <b>{global_help_count}</b> (<b>{global_help_percents}%</b> ваших)\n\n'
     msg = f'📈 Результати учасників 📈\n\n{msg}'
     sql.execute(f"SELECT chatid, right_answers FROM subjects WHERE subject = '{subject}' ORDER by right_answers DESC")
     rows=sql.fetchall()

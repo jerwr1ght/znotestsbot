@@ -696,6 +696,10 @@ def callback_inline(call):
             if res is None:
                 return bot.delete_message(call.message.chat.id, call.message.message_id)
             if action == 'anicehelp':
+                sql.execute(f"SELECT * FROM helps WHERE subject = '{subject}' AND curques = {ques_num}")
+                res=sql.fetchone()
+                if res is None:
+                    return bot.send_message(call.message.chat.id, f"⚠️ Відповідь на питання вже надано.")
                 sql.execute(f"UPDATE helpers SET amount = amount + {1} WHERE chatid = '{helper_chatid}' AND subject = '{subject}'")
                 db.commit()
                 helper_msg = f"✅ Ваше пояснення до запитання: <b>{sub_to_right(subject)} #{ques_num}</b> зараховано."
@@ -723,12 +727,18 @@ def callback_inline(call):
             ques_num = fixed_data.replace(subject, '')
             ques_num = ques_num[1:ques_num.index('_')]
             helper_chatid = fixed_data[fixed_data.index('_')+1:]
+            sql.execute(f"SELECT * FROM helps WHERE subject = '{subject}' AND curques = {ques_num} AND chatid = '{helper_chatid}'")
+            check_ques_visibility=sql.fetchone()
+            if check_ques_visibility is None:
+                bot.send_message(call.message.chat.id, f"⚠️ Ви вже отримали відповідь на запитання.")
             sql.execute(f"SELECT * FROM helpers WHERE chatid = '{helper_chatid}' AND subject = '{subject}'")
             res = sql.fetchone()
             if res is None:
                 sql.execute("INSERT INTO helpers VALUES (%s, %s, %s, %s)", (helper_chatid, subject, 0, 'unbanned'))
                 db.commit()
             if action == 'nicehelp':
+                if check_ques_visibility is None:
+                    return
                 sql.execute(f"UPDATE helpers SET amount = amount + {1} WHERE chatid = '{helper_chatid}' AND subject = '{subject}'")
                 db.commit()
                 bot.send_message(helper_chatid, f"👋 Ваше пояснення: <b>{sub_to_right(subject)} - #{ques_num}</b> зараховано, як задовільне, користувачем.", parse_mode='html')
@@ -742,7 +752,7 @@ def callback_inline(call):
                 sql.execute(f"SELECT chatid FROM admins")
                 rows = sql.fetchall()
                 true_msg = call.message.text[call.message.text.index(')')+1:call.message.text.index('\n\nВи')]
-                msg = f'<b>Запит</b>\n<b>Причина:</b> {argument}\n\n<b>Текст пояснення:</b>\n{true_msg}\n\nВиберіть одну з дій для цього запиту.'
+                msg = f'<b>Запит</b>\n<b>Ідентифікатор користувача:</b> {helper_chatid}\n\n<b>Причина:</b> {argument}\n\n<b>Текст пояснення:</b>\n{true_msg}\n\nВиберіть одну з дій для цього запиту.'
                 admin_reply = types.InlineKeyboardMarkup(row_width=2)
                 admin_reply.add(types.InlineKeyboardButton(f'✅ Відповідь надано вірно (зарахувати її)', callback_data=f'anicehelp-{subject}-{ques_num}_{helper_chatid}#{call.message.chat.id}'))
                 admin_reply.add(types.InlineKeyboardButton(f'⚠️ Попередити автора відповіді про порушення', callback_data=f'awarn-{subject}-{ques_num}_{helper_chatid}#{call.message.chat.id}'))

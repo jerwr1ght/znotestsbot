@@ -203,11 +203,14 @@ def sending(message):
     mes=message.text
     sql.execute("SELECT chatid FROM users")
     rows = sql.fetchall()
+    counter = 0
     for row in rows:
         try:
             bot.send_message(row[0], mes, parse_mode='html', disable_web_page_preview=True)
+            counter += 1
         except:
             pass
+    bot.send_message(message.chat.id, f'Кількість користувачів, що отримали повідомлення: <b>{counter}</b>', parse_mode='html')
     time.sleep(0.5)
 
 @bot.message_handler(commands=['checkemp'])
@@ -289,14 +292,23 @@ def statistics(message):
         statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'statistics-{row}'))
     bot.send_message(message.chat.id, get_statistics(message, subject[0]), parse_mode='html', reply_markup=statistics_reply)
 def get_statistics(message, subject, call=None):
+    sql.execute(f"SELECT * FROM helpers WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
+    res = sql.fetchone()
+    if res is None:
+        help_count=0
+    else:
+        help_count=str(res[2])
+        if res[3]=='banned':
+            help_count = f'{help_count} (доступ заблоковано)'
+
     sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
     res=sql.fetchone()
     if res!=None:
         msg = f'📈 Ваші результати 📈\n\n'
         try:
-            msg = f'{msg}<b>{sub_to_right(res[1])}</b>\nВідповідей:\n✅ Правильних - <b>{res[2]}</b>\n❌ Неправильних - <b>{res[3]}</b>\n💨 Пропущених - <b>{res[4]}</b>\n\n🎯 Точність: <b>{round(int(res[2])*100/(int(res[2])+int(res[3])+int(res[4])), 2)}%</b>\n\nЗараз на запитанні: <b>{res[5]}/{last_ques_check(res[1])}</b>\n\n'
+            msg = f'{msg}<b>{sub_to_right(res[1])}</b>\nВідповідей:\n✅ Правильних - <b>{res[2]}</b>\n❌ Неправильних - <b>{res[3]}</b>\n💨 Пропущених - <b>{res[4]}</b>\n\n🙏 Пояснень: {help_count}\n\n🎯 Точність: <b>{round(int(res[2])*100/(int(res[2])+int(res[3])+int(res[4])), 2)}%</b>\n\n💪 Зараз на запитанні: <b>{res[5]}/{last_ques_check(res[1])}</b>\n\n'
         except ZeroDivisionError:
-            msg = f'{msg}<b>{sub_to_right(res[1])}</b>\nВідповідей:\n✅ Правильних - <b>{res[2]}</b>\n❌ Неправильних - <b>{res[3]}</b>\n💨 Пропущених - <b>{res[4]}</b>\n\n🎯 Точність: неможливо підрахувати на першому запитанні\n\nЗараз на запитанні: <b>{res[5]}/{last_ques_check(res[1])}</b>\n\n'
+            msg = f'{msg}<b>{sub_to_right(res[1])}</b>\nВідповідей:\n✅ Правильних - <b>{res[2]}</b>\n❌ Неправильних - <b>{res[3]}</b>\n💨 Пропущених - <b>{res[4]}</b>\n\n🙏 Пояснень: {help_count}\n\n🎯 Точність: неможливо підрахувати на першому запитанні\n\n💪 Зараз на запитанні: <b>{res[5]}/{last_ques_check(res[1])}</b>\n\n'
         sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}'")
         rows=sql.fetchall()
         if len(rows)<=1:
@@ -336,6 +348,12 @@ def global_statistics(message):
         global_statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'globalstatistics-{row}'))
     bot.send_message(message.chat.id, get_global_statistics(message, subject[0]), parse_mode='html', reply_markup=global_statistics_reply)
 def get_global_statistics(message, subject, call=None):
+    sql.execute(f"SELECT * FROM helpers WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
+    res = sql.fetchone()
+    if res is None:
+        help_count=0
+    else:
+        help_count=int(res[2])
     sql.execute(f"SELECT * FROM subjects WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
     res=sql.fetchone()
     if res is None:
@@ -343,6 +361,11 @@ def get_global_statistics(message, subject, call=None):
 
     #sql.execute(f"SELECT * FROM users")
     #users_number = len(sql.fetchall())
+    sql.execute(f"SELECT * FROM helpers WHERE subject = '{subject}'")
+    rows = sql.fetchall()
+    global_help_count = 0
+    for row in rows:
+        global_help_count += row[2]
     sql.execute(f"SELECT * FROM users")
     rows = sql.fetchall()
     if rows==[]:
@@ -374,10 +397,14 @@ def get_global_statistics(message, subject, call=None):
     except ZeroDivisionError: 
         global_skipped_percents=0.0
     try:
+        global_help_percents = round((help_count*100)/global_help_count,2)
+    except ZeroDivisionError:
+        global_help_percents = 0.0
+    try:
         accuracy = str(round(int(global_right_answers)*100/(int(global_right_answers)+int(global_wrong_answers)+int(global_skipped_answers)), 2))+'%'
     except ZeroDivisionError: 
         accuracy='поки що неможливо підрахувати'
-    msg = f'{msg}<b>{subjects_dict[subject]}</b>\n🌐 Усього учасників: <b>{users_number}/{all_users_number}</b>\n\nЗагальних відповідей:\n✅ Правильних - <b>{global_right_answers}</b> (<b>{global_right_percents}%</b> ваших)\n❌ Неправильних - <b>{global_wrong_answers}</b> (<b>{global_wrong_percents}%</b> ваших)\n💨 Пропущених - <b>{global_skipped_answers}</b> (<b>{global_skipped_percents}%</b> ваших)\n\n🎯 Загальна точність: <b>{accuracy}</b>\n\n'
+    msg = f'{msg}<b>{subjects_dict[subject]}</b>\n🌐 Усього учасників: <b>{users_number}/{all_users_number}</b>\n\nЗагальних відповідей:\n✅ Правильних - <b>{global_right_answers}</b> (<b>{global_right_percents}%</b> ваших)\n❌ Неправильних - <b>{global_wrong_answers}</b> (<b>{global_wrong_percents}%</b> ваших)\n💨 Пропущених - <b>{global_skipped_answers}</b> (<b>{global_skipped_percents}%</b> ваших)\n\n🙏 Загальних пояснень: <b>{global_help_count}</b> (<b>{global_help_percents}%</b> ваших)\n\n🎯 Загальна точність: <b>{accuracy}</b>\n\n'
     msg = f'📈 Результати учасників 📈\n\n{msg}'
     sql.execute(f"SELECT chatid, right_answers FROM subjects WHERE subject = '{subject}' ORDER by right_answers DESC")
     rows=sql.fetchall()

@@ -727,7 +727,7 @@ def callback_inline(call):
             ques_num = fixed_data.replace(subject, '')
             ques_num = ques_num[1:ques_num.index('_')]
             helper_chatid = fixed_data[fixed_data.index('_')+1:]
-            sql.execute(f"SELECT * FROM helps WHERE subject = '{subject}' AND curques = {ques_num} AND chatid = '{helper_chatid}'")
+            sql.execute(f"SELECT * FROM helps WHERE subject = '{subject}' AND curques = {ques_num} AND chatid = '{call.message.chat.id}'")
             check_ques_visibility=sql.fetchone()
             if check_ques_visibility is None:
                 bot.send_message(call.message.chat.id, f"⚠️ Ви вже отримали відповідь на запитання.")

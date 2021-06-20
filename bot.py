@@ -889,7 +889,16 @@ def sending_help(message, subject, ques_num, helper_chatid):
     sql.execute(f"SELECT * FROM helps WHERE subject = '{subject}' AND curques = {ques_num}")
     rows = sql.fetchall()
     for row in rows:
-        bot.send_message(row[0], f'<b>Пояснення ({sub_to_right(subject)} - завдання #{ques_num}</b>)\n<i>{helpmsg}</i>\n\nВи можете оцінити відповідь нижче. Запити розглядаються адміністраторами: ви дізнаєтесь про рішення у повідомленні.', parse_mode='html', reply_markup=quality_reply)
+        ban_counter=len(rows)
+        try:
+            bot.send_message(row[0], f'<b>Пояснення ({sub_to_right(subject)} - завдання #{ques_num}</b>)\n<i>{helpmsg}</i>\n\nВи можете оцінити відповідь нижче. Запити розглядаються адміністраторами: ви дізнаєтесь про рішення у повідомленні.', parse_mode='html', reply_markup=quality_reply)
+        except:
+            sql.execute(f"DELETE FROM helps WHERE chatid = '{row[0]}' AND subject = '{subject}' AND curques = '{ques_num}'")
+            db.commit()
+            ban_counter -= 1
+        if ban_counter>0:
+            bot.send_message(message.chat.id, f"⚠️ На жаль, не всім користувачам надійшло пояснення ({ban_counter}/{len(rows)}), адже доступ до отримання повідомлень від бота був заблокований")
+            return
     bot.send_message(message.chat.id, f"✅ Пояснення надіслано! Зачекайте на відгук користувачів.")
 def sending_answer(message, right_answer, subject, skipped_ques=None):
     if message.text=='/cancel':

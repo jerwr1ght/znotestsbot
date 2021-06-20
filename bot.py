@@ -123,6 +123,7 @@ def helps_list(message):
         helps_list_reply.add(types.InlineKeyboardButton(f'{sub_to_right(row[1])} (#{row[2]})', callback_data=f'givehelp-{row[1]}-{row[2]}'))
     if counter==0:
         return bot.reply_to(message, f'⚠️ Жодних запитань з предметів не знайдено.')
+    helps_list.add(types.InlineKeyboardButton("❌", callback_data='delmsg'))
     bot.send_message(message.chat.id, f'Кількість знайдених запитань з різних предметів: <b>{counter}</b>', parse_mode='html', reply_markup=helps_list_reply)
 
 @bot.message_handler(commands=['makeadmin'])
@@ -290,6 +291,7 @@ def statistics(message):
     statistics_reply=types.InlineKeyboardMarkup(row_width=2)
     for row in subjects_dict:
         statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'statistics-{row}'))
+    statistics_reply.add(types.InlineKeyboardButton("❌", callback_data='delmsg'))
     bot.send_message(message.chat.id, get_statistics(message, subject[0]), parse_mode='html', reply_markup=statistics_reply)
 def get_statistics(message, subject, call=None):
     sql.execute(f"SELECT * FROM helpers WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
@@ -346,6 +348,7 @@ def global_statistics(message):
     global_statistics_reply=types.InlineKeyboardMarkup(row_width=2)
     for row in subjects_dict:
         global_statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'globalstatistics-{row}'))
+    global_statistics_reply.add(types.InlineKeyboardButton("❌", callback_data='delmsg'))
     bot.send_message(message.chat.id, get_global_statistics(message, subject[0]), parse_mode='html', reply_markup=global_statistics_reply)
 def get_global_statistics(message, subject, call=None):
     sql.execute(f"SELECT * FROM helpers WHERE chatid = '{message.chat.id}' AND subject = '{subject}'")
@@ -777,6 +780,7 @@ def callback_inline(call):
             global_statistics_reply=types.InlineKeyboardMarkup(row_width=2)
             for row in subjects_dict:
                 global_statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'globalstatistics-{row}'))
+            statistics_reply.add(types.InlineKeyboardButton("❌", callback_data='delmsg'))
             try:
                 bot.edit_message_text(text=get_global_statistics(call.message, subject, call), chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=global_statistics_reply, parse_mode='html')
             except:
@@ -786,6 +790,7 @@ def callback_inline(call):
             statistics_reply=types.InlineKeyboardMarkup(row_width=2)
             for row in subjects_dict:
                 statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'statistics-{row}'))
+            statistics_reply.add(types.InlineKeyboardButton("❌", callback_data='delmsg'))
             try:
                 bot.edit_message_text(text=get_statistics(call.message, subject, call), chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=statistics_reply, parse_mode='html')
             except:
@@ -875,7 +880,8 @@ def callback_inline(call):
         elif call.data == 'nodelme':
             bot.delete_message(call.message.chat.id, call.message.message_id)
             bot.send_message(call.message.chat.id, '✅ Добре, коли вам знадобиться це, знов використайте команду /deleteme')
-
+        elif call.data == 'delmsg':
+            bot.delete_message(call.message.chat.id, call.message.message_id)
 def sending_help(message, subject, ques_num, helper_chatid):
     if message.text=='/cancel':
         return bot.send_message(message.chat.id, f'✅ Добре! Як тільки будете готові відповісти, знову використайте команду /tohelp.')
@@ -1004,7 +1010,7 @@ def subjects_keyboard():
     subjects_reply=types.InlineKeyboardMarkup(row_width=2)
     for row in subjects_dict:
         subjects_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'change-{row}'))
-
+    subjects_reply.add(types.InlineKeyboardButton("❌", callback_data='delmsg'))
 subjects_keyboard()
 
 

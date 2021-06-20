@@ -123,7 +123,7 @@ def helps_list(message):
         helps_list_reply.add(types.InlineKeyboardButton(f'{sub_to_right(row[1])} (#{row[2]})', callback_data=f'givehelp-{row[1]}-{row[2]}'))
     if counter==0:
         return bot.reply_to(message, f'⚠️ Жодних запитань з предметів не знайдено.')
-    helps_list.add(types.InlineKeyboardButton("❌", callback_data='delmsg'))
+    helps_list_reply.add(types.InlineKeyboardButton("❌", callback_data='delmsg'))
     bot.send_message(message.chat.id, f'Кількість знайдених запитань з різних предметів: <b>{counter}</b>', parse_mode='html', reply_markup=helps_list_reply)
 
 @bot.message_handler(commands=['makeadmin'])

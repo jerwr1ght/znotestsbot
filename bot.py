@@ -387,7 +387,8 @@ def find_abits_checks(message):
         counter = 1
         for row in rows:
             msg=f'{msg}<b><u>#{counter}</u> |</b> {row[2]}'
-            abits_checks_reply.add(types.InlineKeyboardButton(f'Перевірити #{counter}', callback_data=f'abitcheck-{row[1].replace('https://', '')}'), 
+            url = row[1].replace('https://', '')
+            abits_checks_reply.add(types.InlineKeyboardButton(f'Перевірити #{counter}', callback_data=f'abitcheck-{url}'), 
                 types.InlineKeyboardButton(f'❌ Видалити', callback_data=f'delabitcheck-{row[1]}'))
             counter += 1
     abits_checks_reply.add(types.InlineKeyboardButton(f'🔎 Пошук нової сторінки', callback_data=f'new_abitcheck'))

@@ -248,7 +248,8 @@ def take_abiturl(message, URL=None):
         do_takeurl = bot.send_message(message.chat.id, "Введіть посилання на сторінку зі списком заявок певної спеціальності учбового закладу (тільки на сайті vstup.osvita.ua)")
         bot.register_next_step_handler(do_takeurl, do_abitcheck, fio)
     else:
-        do_abitcheck(message, fio, URL)
+        download_thread = threading.Thread(target=do_abitcheck, args=(message, fio, URL))
+        start_clock(message, download_thread)
 
 def do_abitcheck(message, fio, URL=None):
     if URL==None:
@@ -276,7 +277,8 @@ def do_abitcheck(message, fio, URL=None):
         time.sleep(2)
         driver.refresh()
         time.sleep(0.25)
-        more_button = driver.find_element_by_xpath('/html/body/div[7]/div/div/div[3]/span').click()
+        #more_button = driver.find_element_by_xpath('/html/body/div[7]/div/div/div[3]/span').click()
+        more_button = driver.find_element_by_class_name('container dtlnk').find_element_by_tag_name('span').click()
         time.sleep(1)
         #Собрали все колонки таблицы
     except UnexpectedAlertPresentException as ex:

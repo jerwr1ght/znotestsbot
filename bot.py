@@ -263,13 +263,14 @@ def do_abitcheck(message, fio, URL=None):
     user_fio = fio
     user_grate = 0
 
-    #useragent = UserAgent()
+    useragent = UserAgent()
     chrome_options = webdriver.ChromeOptions()
     chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
-    #chrome_options.add_argument(f"user-agent={useragent.random}")
+    chrome_options.add_argument(f"user-agent={useragent.chrome}")
+    chrome_options.add_argument("--proxy-server=138.128.91.65:8000")
     driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), options=chrome_options)
 
     try:
@@ -277,9 +278,7 @@ def do_abitcheck(message, fio, URL=None):
         time.sleep(2)
         driver.refresh()
         time.sleep(3)
-        more_button = driver.find_element_by_xpath("//iframe[@title='iframe']")
-        while more_button.is_displayed()==False:
-            time.sleep(0.5)
+        more_button = driver.find_element_by_xpath('/html/body/div[7]/div/div/div[3]/span')
         more_button.click()
         #more_button = driver.find_element_by_class_name('container dtlnk').find_element_by_tag_name('span').click()
         time.sleep(1)

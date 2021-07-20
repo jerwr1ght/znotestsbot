@@ -276,9 +276,9 @@ def do_abitcheck(message, fio, URL=None):
         driver.get(url=URL)
         time.sleep(2)
         driver.refresh()
-        time.sleep(0.25)
-        #more_button = driver.find_element_by_xpath('/html/body/div[7]/div/div/div[3]/span').click()
-        more_button = driver.find_element_by_class_name('container dtlnk').find_element_by_tag_name('span').click()
+        time.sleep(3)
+        more_button = driver.find_element_by_xpath('/html/body/div[7]/div/div/div[3]/span').click()
+        #more_button = driver.find_element_by_class_name('container dtlnk').find_element_by_tag_name('span').click()
         time.sleep(1)
         #Собрали все колонки таблицы
     except UnexpectedAlertPresentException as ex:
@@ -287,7 +287,7 @@ def do_abitcheck(message, fio, URL=None):
         print(ex)
         return bot.send_message(message.chat.id, 'Виникла помилка під час підключення до сайту. Можливо, сторінка не була знайдена. Спробуйте ще раз та перевірте посилання.')
     finally:
-        time.sleep(5)
+        time.sleep(4)
         needed_html_code = driver.page_source
         driver.close()
         driver.quit()

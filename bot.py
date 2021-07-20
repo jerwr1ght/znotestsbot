@@ -258,7 +258,7 @@ def do_abitcheck(message, fio, URL=None):
         URL = URL.replace('https://', '')
         URL = f'https://{URL}'
     if 'vstup.osvita.ua' not in URL:
-        return bot.reply_to("У вашому посиланні немає адреси vstup.osvita.ua. Спробуйте ще раз.")
+        return bot.reply_to(message, "У вашому посиланні немає адреси vstup.osvita.ua. Спробуйте ще раз.")
     user_fio = fio
     user_grate = 0
 

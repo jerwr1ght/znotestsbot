@@ -792,7 +792,7 @@ def callback_inline(call):
             global_statistics_reply=types.InlineKeyboardMarkup(row_width=2)
             for row in subjects_dict:
                 global_statistics_reply.add(types.InlineKeyboardButton(subjects_dict[row], callback_data=f'globalstatistics-{row}'))
-            statistics_reply.add(types.InlineKeyboardButton("❌", callback_data='delmsg'))
+            global_statistics_reply.add(types.InlineKeyboardButton("❌", callback_data='delmsg'))
             try:
                 bot.edit_message_text(text=get_global_statistics(call.message, subject, call), chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=global_statistics_reply, parse_mode='html')
             except:

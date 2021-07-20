@@ -234,7 +234,7 @@ def abitchecking(message):
         find_abits_checks(message)
 
 def adding_abit(message):
-    if message.text.list().count('.')<2:
+    if list(message.text).count('.')<2:
         return bot.reply_to(message, f'⚠️ Ви не додали ініціали, як показано у прикладі.')
     sql.execute("INSERT INTO abits VALUES (%s, %s)", (message.chat.id, message.text))
     db.commit()

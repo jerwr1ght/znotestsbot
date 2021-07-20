@@ -277,7 +277,7 @@ def do_abitcheck(message, fio, URL=None):
         time.sleep(2)
         driver.refresh()
         time.sleep(3)
-        more_button = driver.find_element_by_css_selector('iframe.absolute')
+        more_button = driver.find_element_by_xpath('/html/body/div[7]/div/div/div[3]/span')
         while more_button.is_displayed()==False:
             time.sleep(0.5)
         more_button.click()

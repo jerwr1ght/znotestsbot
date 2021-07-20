@@ -282,6 +282,7 @@ def do_abitcheck(message, fio, URL=None):
     except UnexpectedAlertPresentException as ex:
         return bot.send_message(message.chat.id, "Виникла помилка під час підключення до сайту через постійних спроб зі сторони боту. Зачекайте, будь ласка, та спробуйте ще раз.")
     except Exception as ex:
+        print(ex)
         return bot.send_message(message.chat.id, 'Виникла помилка під час підключення до сайту. Можливо, сторінка не була знайдена. Спробуйте ще раз та перевірте посилання.')
     finally:
         time.sleep(5)

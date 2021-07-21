@@ -297,16 +297,16 @@ def do_abitcheck(message, fio, URL=None):
     HEADERS = {'User-Agent': useragent.random}
     soup = BeautifulSoup(needed_html_code, 'html.parser')
 
-    univer_info = f'{soup.find('h5', class_='text-primary text-uppercase').get_text(strip=True)}. {soup.find('dl', class_='row offer-study-programs').dt.get_text(strip=True)}: {soup.find('dl', class_='row offer-study-programs').dd.get_text(strip=True)}'
+    univer_info = f"{soup.find('h5', class_='text-primary text-uppercase').get_text(strip=True)}. {soup.find('dl', class_='row offer-study-programs').dt.get_text(strip=True)}: {soup.find('dl', class_='row offer-study-programs').dd.get_text(strip=True)}"
     full_univer_info = ''
     offer_info = soup.find('div', class_='offer-info-left')
     offer_items = offer_info.find_all('dl')
     for offer_item in offer_items:
-        full_univer_info = f'{full_univer_info}{offer_item.find('dt').get_text(strip=True)}: '
+        full_univer_info = f"{full_univer_info}{offer_item.find('dt').get_text(strip=True)}: "
         if offer_item.find('span', class_='badge badge-primary')!=None:
-            full_univer_info = f'{full_univer_info}{offer_item.find('span', class_='badge badge-primary').get_text(strip=True)} ({offer_item.find('span', class_='text-uppercase text-primary').get_text(strip=True)})'
+            full_univer_info = f"{full_univer_info}{offer_item.find('span', class_='badge badge-primary').get_text(strip=True)} ({offer_item.find('span', class_='text-uppercase text-primary').get_text(strip=True)})"
         else:
-            full_univer_info = f'{full_univer_info}{offer_item.find('dd').get_text(strip=True)}'
+            full_univer_info = f"{full_univer_info}{offer_item.find('dd').get_text(strip=True)}"
     print(full_univer_info)
     print(univer_info)
     return

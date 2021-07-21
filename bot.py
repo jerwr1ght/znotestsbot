@@ -258,19 +258,18 @@ def do_abitcheck(message, fio, URL=None):
     else:
         URL = URL.replace('https://', '')
         URL = f'https://{URL}'
-    if 'vstup.osvita.ua' not in URL:
+    if 'vstup.edbo.gov.ua/' not in URL:
         return bot.reply_to(message, "У вашому посиланні немає адреси vstup.osvita.ua. Спробуйте ще раз.")
     user_fio = fio
     user_grate = 0
 
-    #useragent = UserAgent()
+    useragent = UserAgent()
     chrome_options = webdriver.ChromeOptions()
     chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
-    #chrome_options.add_argument(f"user-agent={useragent.chrome}")
-    chrome_options.add_argument("--proxy-server=138.128.91.65:8000")
+    chrome_options.add_argument(f"user-agent={useragent.chrome}")
     driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), options=chrome_options)
 
     try:
@@ -278,8 +277,10 @@ def do_abitcheck(message, fio, URL=None):
         time.sleep(2)
         driver.refresh()
         time.sleep(3)
-        more_button = driver.find_element_by_xpath('/html/body/div[7]/div/div/div[3]/span')
-        more_button.click()
+        more_button = driver.find_element_by_xpath('/html/body/main/div/div[2]/div[3]/button')
+        while more_button.is_displayed() == True:
+            more_button.click()
+            time.sleep(1)
         #more_button = driver.find_element_by_class_name('container dtlnk').find_element_by_tag_name('span').click()
         time.sleep(1)
         #Собрали все колонки таблицы
@@ -295,32 +296,20 @@ def do_abitcheck(message, fio, URL=None):
         driver.quit()
     HEADERS = {'User-Agent': useragent.random}
     soup = BeautifulSoup(needed_html_code, 'html.parser')
-    
-    #инфа про специальность и вуз
-    univer_info = soup.find('div', class_='page-vnz-detail-header').find('h1').get_text(strip=True).replace(": ", ":").replace(":", ": ").replace('.', ". ")
-    univer_info = f"{univer_info}Навчальний заклад: {soup.find('div', class_='page-vnz-detail-header').find('h2').get_text(strip=True)}."
-    #print(univer_info)
 
-    #Узнаем кол-во поданых мест
-    requests_count = int(soup.find('b', class_='requests_count').get_text(strip=True))
-    max_dershes = soup.find_all('div', class_='table-of-specs-item panel-mobile')
-
-    contents = ''
-    for row in max_dershes:
-        if 'ліцензований обсяг прийому' in row.get_text(strip=True).lower():
-            contents=row.get_text()
-
-    full_info = ''
-    symbols_check='йцукенгшщзхїфівапролджєячсмитьбю.:'
-    for i in range(len(contents)):
-        if contents[i].isdigit() == False and contents[i].lower() not in symbols_check:
-            continue
-        full_info = f"{full_info}{contents[i]}"
-        if contents[i+1] not in symbols_check and contents[i+1].isdigit()!=True:
-            full_info = f'{full_info} '
-        if contents[i].isdigit()==True and contents[i+1].isdigit()!=True and contents[i+1] not in symbols_check:
-            full_info = f'{full_info}\n'
-
+    univer_info = f'{soup.find('h5', class_='text-primary text-uppercase').get_text(strip=True)}. {soup.find('dl', class_='row offer-study-programs').dt.get_text(strip=True)}: {soup.find('dl', class_='row offer-study-programs').dd.get_text(strip=True)}'
+    full_univer_info = ''
+    offer_info = soup.find('div', class_='offer-info-left')
+    offer_items = offer_info.find_all('dl')
+    for offer_item in offer_items:
+        full_univer_info = f'{full_univer_info}{offer_item.find('dt').get_text(strip=True)}: '
+        if offer_item.find('span', class_='badge badge-primary')!=None:
+            full_univer_info = f'{full_univer_info}{offer_item.find('span', class_='badge badge-primary').get_text(strip=True)} ({offer_item.find('span', class_='text-uppercase text-primary').get_text(strip=True)})'
+        else:
+            full_univer_info = f'{full_univer_info}{offer_item.find('dd').get_text(strip=True)}'
+    print(full_univer_info)
+    print(univer_info)
+    return
     columns = soup.find_all('tr', {'class':['rstatus6', 'rstatus1']})
     full_list = []
     for column in columns:

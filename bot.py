@@ -245,7 +245,7 @@ def take_abiturl(message, URL=None):
     res = sql.fetchone()
     fio = res[1]
     if URL==None:
-        do_takeurl = bot.send_message(message.chat.id, "Введіть посилання на сторінку зі списком заявок певної спеціальності учбового закладу (тільки на сайті vstup.osvita.ua)")
+        do_takeurl = bot.send_message(message.chat.id, "Введіть посилання на сторінку зі списком заявок певної спеціальності учбового закладу (тільки на сайті vstup.edbo.gov.ua)")
         bot.register_next_step_handler(do_takeurl, do_abitcheck, fio)
     else:
         download_thread = threading.Thread(target=do_abitcheck, args=(message, fio, URL))
@@ -258,18 +258,18 @@ def do_abitcheck(message, fio, URL=None):
     else:
         URL = URL.replace('https://', '')
         URL = f'https://{URL}'
-    if 'vstup.edbo.gov.ua/' not in URL:
-        return bot.reply_to(message, "У вашому посиланні немає адреси vstup.osvita.ua. Спробуйте ще раз.")
+    if 'vstup.edbo.gov.ua' not in URL:
+        return bot.reply_to(message, "У вашому посиланні немає адреси vstup.edbo.gov.ua. Спробуйте ще раз.")
     user_fio = fio
     user_grate = 0
 
-    useragent = UserAgent()
+    #useragent = UserAgent()
     chrome_options = webdriver.ChromeOptions()
     chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument(f"user-agent={useragent.chrome}")
+    #chrome_options.add_argument(f"user-agent={useragent.chrome}")
     driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), options=chrome_options)
 
     try:

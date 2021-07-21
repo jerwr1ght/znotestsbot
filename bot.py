@@ -277,7 +277,7 @@ def do_abitcheck(message, fio, URL=None):
         time.sleep(2)
         driver.refresh()
         time.sleep(3)
-        more_button = driver.find_element_by_xpath('/html/body/main/div/div[2]/div[3]/button')
+        more_button = driver.find_element_by_id('requests-load')
         while more_button.is_displayed() == True:
             more_button.click()
             time.sleep(1)

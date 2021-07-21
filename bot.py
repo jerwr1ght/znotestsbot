@@ -8,11 +8,7 @@ import threading
 from bs4 import BeautifulSoup
 import lxml
 import time
-import os
 import random
-from selenium import webdriver
-from selenium.common.exceptions import UnexpectedAlertPresentException
-from fake_useragent import UserAgent
 global db
 global sql
 global subjects_dict
@@ -33,11 +29,6 @@ sql.execute("""CREATE TABLE IF NOT EXISTS helpers (chatid TEXT, subject TEXT, am
 db.commit()
 sql.execute("""CREATE TABLE IF NOT EXISTS admins (chatid TEXT, username TEXT)""")
 db.commit()
-sql.execute("""CREATE TABLE IF NOT EXISTS abits (chatid TEXT, fio TEXT)""")
-db.commit()
-sql.execute("""CREATE TABLE IF NOT EXISTS abits_checks (chatid TEXT, link TEXT, name TEXT)""")
-db.commit()
-
 #sql.execute(f"DELETE FROM helpers")
 #db.commit()
 #sql.execute(f"DELETE FROM helps")
@@ -222,171 +213,6 @@ def sending(message):
             pass
     bot.send_message(message.chat.id, f'Кількість користувачів, що отримали повідомлення: <b>{counter}</b>', parse_mode='html')
     time.sleep(0.5)
-
-@bot.message_handler(commands=['abitcheck'])
-def abitchecking(message):
-    sql.execute(f"SELECT * FROM abits WHERE chatid = '{message.chat.id}'")
-    res = sql.fetchone()
-    if res is None:
-        add_abit = bot.send_message(message.chat.id, 'Введіть ваші прізвище та ініціали українськими літерами (приклад: Шевченко Т.Г.). Пізніше ви зможете змінити ці дані.')
-        bot.register_next_step_handler(add_abit, adding_abit)
-    else:
-        find_abits_checks(message)
-
-def adding_abit(message):
-    if list(message.text).count('.')<2:
-        return bot.reply_to(message, f'⚠️ Ви не додали ініціали, як показано у прикладі.')
-    sql.execute("INSERT INTO abits VALUES (%s, %s)", (message.chat.id, message.text))
-    db.commit()
-    find_abits_checks(message)
-
-def take_abiturl(message, URL=None):
-    sql.execute(f"SELECT * FROM abits WHERE chatid = '{message.chat.id}'")
-    res = sql.fetchone()
-    fio = res[1]
-    if URL==None:
-        do_takeurl = bot.send_message(message.chat.id, "Введіть посилання на сторінку зі списком заявок певної спеціальності учбового закладу (тільки на сайті vstup.edbo.gov.ua)")
-        bot.register_next_step_handler(do_takeurl, do_abitcheck, fio)
-    else:
-        download_thread = threading.Thread(target=do_abitcheck, args=(message, fio, URL))
-        start_clock(message, download_thread)
-
-def do_abitcheck(message, fio, URL=None):
-    if URL==None:
-        URL = message.text.replace('https://', '')
-        URL = f'https://{URL}'
-    else:
-        URL = URL.replace('https://', '')
-        URL = f'https://{URL}'
-    if 'vstup.edbo.gov.ua' not in URL:
-        return bot.reply_to(message, "У вашому посиланні немає адреси vstup.edbo.gov.ua. Спробуйте ще раз.")
-    user_fio = fio
-    user_grate = 0
-
-    #useragent = UserAgent()
-    chrome_options = webdriver.ChromeOptions()
-    chrome_options.binary_location = os.environ.get("GOOGLE_CHROME_BIN")
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--no-sandbox")
-    #chrome_options.add_argument(f"user-agent={useragent.chrome}")
-    driver = webdriver.Chrome(executable_path=os.environ.get("CHROMEDRIVER_PATH"), options=chrome_options)
-
-    try:
-        driver.get(url=URL)
-        time.sleep(2)
-        driver.refresh()
-        time.sleep(3)
-        more_button = driver.find_element_by_id('requests-load')
-        while more_button.is_displayed() == True:
-            more_button.click()
-            time.sleep(1)
-        #more_button = driver.find_element_by_class_name('container dtlnk').find_element_by_tag_name('span').click()
-        time.sleep(1)
-        #Собрали все колонки таблицы
-    except UnexpectedAlertPresentException as ex:
-        return bot.send_message(message.chat.id, "Виникла помилка під час підключення до сайту через постійних спроб зі сторони боту. Зачекайте, будь ласка, та спробуйте ще раз.")
-    except Exception as ex:
-        print(ex)
-        return bot.send_message(message.chat.id, 'Виникла помилка під час підключення до сайту. Можливо, сторінка не була знайдена. Спробуйте ще раз та перевірте посилання.')
-    finally:
-        time.sleep(4)
-        needed_html_code = driver.page_source
-        driver.close()
-        driver.quit()
-    HEADERS = {'User-Agent': useragent.random}
-    soup = BeautifulSoup(needed_html_code, 'html.parser')
-
-    univer_info = f"{soup.find('h5', class_='text-primary text-uppercase').get_text(strip=True)}. {soup.find('dl', class_='row offer-study-programs').dt.get_text(strip=True)}: {soup.find('dl', class_='row offer-study-programs').dd.get_text(strip=True)}"
-    full_univer_info = ''
-    offer_info = soup.find('div', class_='offer-info-left')
-    offer_items = offer_info.find_all('dl')
-    for offer_item in offer_items:
-        full_univer_info = f"{full_univer_info}{offer_item.find('dt').get_text(strip=True)}: "
-        if offer_item.find('span', class_='badge badge-primary')!=None:
-            full_univer_info = f"{full_univer_info}{offer_item.find('span', class_='badge badge-primary').get_text(strip=True)} ({offer_item.find('span', class_='text-uppercase text-primary').get_text(strip=True)})"
-        else:
-            full_univer_info = f"{full_univer_info}{offer_item.find('dd').get_text(strip=True)}"
-    print(full_univer_info)
-    print(univer_info)
-    return
-    columns = soup.find_all('tr', {'class':['rstatus6', 'rstatus1']})
-    full_list = []
-    for column in columns:
-        if column.find('td', {'data-th':'ПІБ'}).get_text(strip=True).lower() == user_fio.lower():
-            user_grate = float(column.find('td', {'data-th':'Бал'}).get_text(strip=True).replace('розрахунок', ''))
-            user_prio = column.find('td', {'data-th':'П'}).get_text(strip=True)
-            continue
-        full_list.append({
-            'fio':column.find('td', {'data-th':'ПІБ'}).get_text(strip=True),
-            'prio':column.find('td', {'data-th':'П'}).get_text(strip=True),
-            'bal':float(column.find('td', {'data-th':'Бал'}).get_text(strip=True).replace('розрахунок', '')),
-            })
-        #print(column.find('td', {'data-th':'ПІБ'}))
-
-    if user_grate == 0:
-        return bot.send_message(message.chat.id, f"Користувача з ФІО <b>{user_fio}</b> не знайдено. Можливо сталася помилка з підключенням або ви зробили помилку у вашому запиті.", parse_mode='html')
-    print(user_grate)
-    prios = {'1':0, '2':0, '3':0, '4':0, '5':0, '-': 0}
-    user_place = 1
-    same_grate_count = 0
-    prios_global_count = 0
-    for item in full_list:
-        if item['bal']>user_grate:
-            user_place += 1
-            if item['prio'].isdigit() == True:
-                prios[str(item['prio'])] += 1
-            else:
-                prios['-'] += 1
-            prios_global_count += 1
-        elif item['bal']==user_grate:
-            same_grate_count += 1
-            full_list.remove(item)
-        else:
-            full_list.remove(item)
-
-    msg = f"Ви на {user_place}/{requests_count} серед інших абітурієнтів, з таким балом, як у вас - {same_grate_count}.\n"
-    msg = f'{msg}Статистика пріорітетності: '
-    for key in prios.keys():
-        edited_key = key.replace('-', 'без пріорітетності')
-        percents = str(round(prios[key]*100/prios_global_count))
-        msg = f'{msg}{edited_key} - {prios[key]} ({percents}%), '
-    msg = msg[:-2]+'\n'
-    if user_prio.isdigit()==True:
-        msg=f"{msg}Однак, якщо врахувати, що хоча б 50% можливо подали заявки на нижчий пріорітет, ситуація може бути така: "
-        for key in prios.keys():
-            if key.isdigit()==True:
-                if int(user_prio)<int(key):
-                    user_place -= int(round(prios[key]/2, 1))
-        msg = f'{univer_info}\n\nІнформація стосовно спеціальності:\n{full_info}\n\nВаші прізвище та ініціали: {user_fio}\n\n{msg}≈{user_place}/{requests_count} (заяви без пріорітетності не враховувались)'
-    sql.execute(f"SELECT * FROM abits_checks WHERE chatid = '{message.chat.id}' AND link ='{URL}'")
-    res = sql.fetchone()
-    if res is None:
-        sql.execute("INSERT INTO abits_checks VALUES (%s, %s, %s)", (message.chat.id, URL, univer_info))
-        db.commit()
-    return bot.send_message(message.chat.id, msg, parse_mode='html')
-
-def find_abits_checks(message):
-    sql.execute(f"SELECT * FROM abits WHERE chatid = '{message.chat.id}'")
-    res = sql.fetchone()
-    fio = res[1]
-    sql.execute(f"SELECT * FROM abits_checks WHERE chatid = '{message.chat.id}'")
-    rows = sql.fetchall()
-    abits_checks_reply = types.InlineKeyboardMarkup(row_width=2)
-    msg = f'Ваші прізвище та ініціали: {fio}\n'
-    if rows == []:
-        msg = f'{msg}Немає жодної доданої сторінки на перевірку.'
-    else:
-        msg = f'{msg}Ви додали {len(rows)} сторінок:\n'
-        counter = 1
-        for row in rows:
-            msg=f'{msg}<b><u>#{counter}</u> |</b> {row[2]}'
-            url = row[1].replace('https://', '')
-            abits_checks_reply.add(types.InlineKeyboardButton(f'Перевірити #{counter}', callback_data=f'abitcheck-{url}'), 
-                types.InlineKeyboardButton(f'❌ Видалити', callback_data=f'delabitcheck-{row[1]}'))
-            counter += 1
-    abits_checks_reply.add(types.InlineKeyboardButton(f'🔎 Пошук нової сторінки', callback_data=f'new_abitcheck'))
-    bot.send_message(message.chat.id, msg, parse_mode='html', reply_markup=abits_checks_reply)
 
 @bot.message_handler(commands=['checkemp'])
 def checking_emp(message):
@@ -843,12 +669,6 @@ def callback_inline(call):
             msg=f'✅ Гаразд. Час розпочинати! Виберіть предмет, тести з якого бажаєте пройти. Ви також зможете змінити предмет, скориставшись командою /changesub.'
             bot.send_message(call.message.chat.id, msg, reply_markup=subjects_reply)
             #sending_new(call.message)
-        elif 'new_abitcheck' == call.data:
-            take_abiturl(call.message, URL=None)
-            bot.delete_message(call.message.chat.id, call.message.message_id)
-        elif 'abitcheck-' in call.data:
-            take_abiturl(call.message, URL = call.data.replace('abitcheck-', ''))
-            bot.delete_message(call.message.chat.id, call.message.message_id)
         elif 'returnhelp-' in call.data:
             #returnhelp-{subject}-{user_question}_{message.chat.id}
             print(call.data)
@@ -1066,14 +886,6 @@ def callback_inline(call):
             sql.execute(f"DELETE FROM subjects WHERE chatid = '{call.message.chat.id}'")
             db.commit()
             sql.execute(f"DELETE FROM skipped WHERE chatid = '{call.message.chat.id}'")
-            db.commit()
-            sql.execute(f"DELETE FROM helps WHERE chatid = '{call.message.chat.id}'")
-            db.commit()
-            sql.execute(f"DELETE FROM helpers WHERE chatid = '{call.message.chat.id}'")
-            db.commit()
-            sql.execute(f"DELETE FROM abits WHERE chatid = '{call.message.chat.id}'")
-            db.commit()
-            sql.execute(f"DELETE FROM abits_checks WHERE chatid = '{call.message.chat.id}'")
             db.commit()
             bot.delete_message(call.message.chat.id, call.message.message_id)
             bot.send_message(call.message.chat.id, f'✅ Ваш акаунт був видалений. Успіхів!')
